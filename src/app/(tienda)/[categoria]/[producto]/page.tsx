@@ -13,7 +13,7 @@ import {
   obtenerProductoPorSlug,
   obtenerTasaVigente,
 } from "@/lib/catalogo";
-import { enlaceWhatsapp } from "@/lib/contacto";
+import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
 import { calcularAhorro, formatearBs, formatearUsd } from "@/lib/formato";
 
 type Params = { categoria: string; producto: string };
@@ -283,16 +283,21 @@ function BloqueAhorro({
 function TarjetaAsesor({ nombreProducto }: { nombreProducto: string }) {
   return (
     <div className="bg-superficie rounded-tarjeta border-borde-sutil flex items-center gap-3 border p-4">
-      <Avatar iniciales="JM" />
+      <Avatar iniciales={ASESOR.iniciales} />
 
       <div className="min-w-0 flex-1">
-        <p className="text-texto text-sm font-medium">José M., de apso</p>
+        {/* Nombre completo aquí, de pila en el resto: en la ficha se está
+            decidiendo una compra y el apellido da respaldo; en el saludo del
+            chat sonaría acartonado. */}
+        <p className="text-texto text-sm font-medium">
+          {ASESOR.nombreCompleto}, de apso
+        </p>
         <p className="text-exito text-xs">En línea ahora</p>
       </div>
 
       <a
         href={enlaceWhatsapp(
-          `Hola José, tengo una duda sobre el ${nombreProducto}.`,
+          `Hola ${ASESOR.nombre}, tengo una duda sobre el ${nombreProducto}.`,
         )}
         target="_blank"
         rel="noopener noreferrer"

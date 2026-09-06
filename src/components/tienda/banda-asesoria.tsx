@@ -1,4 +1,4 @@
-import { enlaceWhatsapp } from "@/lib/contacto";
+import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
 
 /**
  * Banda de asesoría al pie del listado.
@@ -10,7 +10,7 @@ import { enlaceWhatsapp } from "@/lib/contacto";
 export function BandaAsesoria() {
   return (
     <section className="bg-superficie-alta rounded-panel mt-10 flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center">
-      <Avatar iniciales="JM" />
+      <Avatar iniciales={ASESOR.iniciales} />
 
       <div className="flex-1">
         <h2 className="font-display text-texto tracking-titular text-lg font-semibold">
@@ -18,7 +18,7 @@ export function BandaAsesoria() {
         </h2>
         <p className="text-texto-2 mt-1 max-w-xl text-sm leading-relaxed">
           Cuéntame qué necesitas y para qué lo vas a usar, y te digo la opción
-          que más te rinde. Hoy atiende José M.
+          que más te rinde. Hoy atiende {ASESOR.nombre}.
         </p>
       </div>
 
