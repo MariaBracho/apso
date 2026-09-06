@@ -1,69 +1,103 @@
-import Image from "next/image";
+import type { Metadata } from "next";
+import Link from "next/link";
 
-export default function Home() {
+import { Logo } from "@/components/marca/isotipo";
+
+export const metadata: Metadata = {
+  title: "apso — El equipo correcto, al precio real.",
+};
+
+/**
+ * Bienvenida (flujo 01, paso 1).
+ *
+ * No hay muro de registro: desde aquí se entra al catálogo completo sin
+ * cuenta. La cuenta se pide recién al enviar un pedido, y para entonces ya
+ * llega con nombre, correo y WhatsApp adjuntos.
+ *
+ * Pendiente: el botón "Entrar con Google" aparece cuando esté conectado
+ * Supabase Auth — no se dibuja un botón que todavía no lleva a ningún lado.
+ */
+export default function PaginaBienvenida() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-1 flex-col">
+      <header className="mx-auto w-full max-w-[1400px] px-6 py-8">
+        <Logo />
+      </header>
+
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-16">
+        <h1 className="font-display text-texto tracking-display text-4xl leading-tight font-semibold sm:text-5xl">
+          El equipo correcto,
+          <br />
+          al precio real.
+        </h1>
+
+        <p className="text-texto-2 mt-5 text-base leading-relaxed">
+          Componentes, laptops y PC a medida traídos de Estados Unidos. Te
+          decimos qué necesitas de verdad, y lo que cuesta de verdad.
+        </p>
+
+        <ul className="mt-10 space-y-5">
+          <Punto
+            titulo="Precio sin spread inflado"
+            detalle="El margen es el que corresponde, no el que aguanta el mercado."
+          />
+          <Punto
+            titulo="Original de EE. UU."
+            detalle="Piezas nuevas y auténticas, con su procedencia clara."
+          />
+          <Punto
+            titulo="Garantía con serial"
+            detalle="Guardamos el serial desde el día de la compra. Si algo falla, no tienes que buscar la factura."
+          />
+        </ul>
+
+        <div className="mt-12">
+          <Link
+            href="/componentes"
+            className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 inline-block px-8 py-3.5 text-sm font-semibold transition-colors"
+          >
+            Ver la tienda
+          </Link>
+          <p className="text-texto-meta mt-3 text-xs">
+            No hace falta cuenta para ver todo el catálogo.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
       </main>
+
+      <footer className="text-texto-meta mx-auto w-full max-w-[1400px] px-6 py-8 text-xs">
+        Punto Fijo, estado Falcón · Entrega a domicilio y envíos nacionales
+      </footer>
     </div>
+  );
+}
+
+function Punto({ titulo, detalle }: { titulo: string; detalle: string }) {
+  return (
+    <li className="flex gap-3.5">
+      <MarcaDeVerificacion />
+      <div>
+        <p className="text-texto text-sm font-semibold">{titulo}</p>
+        <p className="text-texto-2 mt-0.5 text-sm leading-relaxed">{detalle}</p>
+      </div>
+    </li>
+  );
+}
+
+/** Trazo de 2 px, extremos rectos, monocromo (manual de marca, §10). */
+function MarcaDeVerificacion() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="square"
+      className="text-cian mt-0.5 shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M4 12.5l5 5L20 6.5" />
+    </svg>
   );
 }

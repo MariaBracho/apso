@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------------------------------------------------------------------------
+   Sistema de diseño apso
+   Tokens tomados del handoff de diseño (design_handoff_mvp/README.md) y del
+   manual de marca. Los nombres siguen el vocabulario del handoff en español
+   ("Superficie 1", "Texto secundario") para que el mapeo sea directo.
+
+   Nota de fidelidad: el manual de marca impreso exige radio 0 en toda pieza
+   física. El producto digital usa deliberadamente esquinas redondeadas —
+   decisión ya tomada y documentada. Seguir el radio del prototipo.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* --- Superficies (dark theme de producto) --- */
+  --color-fondo: #13101b;
+  --color-superficie: #1a1524;
+  --color-superficie-2: #241e33;
+  --color-superficie-3: #2e2740;
+  --color-superficie-alta: #2f2148;
+
+  /* --- Acentos --- */
+  --color-cian: #5cd7e8;
+  --color-cian-profundo: #0e9aab;
+  --color-ambar: #f2a93b;
+
+  /* --- Texto --- */
+  --color-texto: #f4f1ec;
+  --color-texto-2: #c7c1d2;
+  --color-texto-3: #a79fb8;
+  --color-texto-meta: #6b6478;
+
+  /* --- Estado --- */
+  --color-exito: #4ade80;
+  --color-error: #e5605a;
+
+  /* --- Marca (manual impreso, para piezas y fondos claros) --- */
+  --color-violeta: #241735;
+  --color-hueso: #f4f1ec;
+  --color-tinta: #14101c;
+  --color-niebla: #9b94a6;
+
+  /* --- Bordes --- */
+  --color-borde: #2e2740;
+  --color-borde-sutil: #241e33;
+
+  /* --- Radios --- */
+  --radius-tarjeta: 0.875rem; /* 14px */
+  --radius-panel: 1.25rem; /* 20px */
+  --radius-pildora: 999px;
+
+  /* --- Interletrado ---
+     Sora lleva tracking negativo en tamaños grandes (−2.5% a −5.5%).
+     Las etiquetas van en mayúscula con +14–18%. */
+  --tracking-display: -0.055em;
+  --tracking-titular: -0.025em;
+  --tracking-etiqueta: 0.16em;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    font-family: var(--font-sans);
+  }
+
+  /* Sora para titulares y cifras; el tracking negativo se aplica por utilidad
+     donde el tamaño lo pide. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  ::selection {
+    background-color: var(--color-cian);
+    color: var(--color-superficie);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Etiqueta: Karla 600, mayúscula, +16% de interletrado. */
+  .etiqueta {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-etiqueta);
+  }
+}
+
+/* Anillo de foco consistente en toda la app. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-cian);
+    outline-offset: 2px;
+  }
 }
