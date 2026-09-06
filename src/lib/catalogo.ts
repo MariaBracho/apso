@@ -34,6 +34,18 @@ const CAMPOS_FICHA = `
   marca:marcas (slug, nombre)
 `;
 
+
+/**
+ * Deja constancia de un fallo de consulta antes de devolver el vacío.
+ *
+ * Sin esto, un error de conexión se ve igual que "no hay datos": la tienda
+ * aparece vacía y nada explica por qué. En producción esto sale en los logs
+ * del servidor, que es donde se busca cuando algo no cuadra.
+ */
+function avisarFallo(donde: string, error: { message: string } | null) {
+  if (error) console.error(`[catalogo] ${donde}: ${error.message}`);
+}
+
 /** La tasa vigente. Se muestra en la barra superior de todas las pantallas. */
 export async function obtenerTasaVigente(): Promise<number | null> {
   const supabase = await crearClienteServidor();
@@ -46,6 +58,7 @@ export async function obtenerTasaVigente(): Promise<number | null> {
     .limit(1)
     .maybeSingle();
 
+  avisarFallo("tasa vigente", error);
   if (error || !data) return null;
   return Number(data.valor);
 }
@@ -60,6 +73,7 @@ export async function obtenerCategoriasRaiz(): Promise<Categoria[]> {
     .is("padre_id", null)
     .order("orden");
 
+  avisarFallo("categorías raíz", error);
   if (error || !data) return [];
   return data as Categoria[];
 }
@@ -75,6 +89,7 @@ export async function obtenerCategoriaPorSlug(
     .eq("slug", slug)
     .maybeSingle();
 
+  avisarFallo(`categoría ${slug}`, error);
   if (error || !data) return null;
   return data as Categoria;
 }
@@ -185,6 +200,7 @@ export async function obtenerProductos(
   }
 
   const { data, error } = await consulta.returns<ProductoListado[]>();
+  avisarFallo("productos", error);
   if (error || !data) return [];
 
   // La disponibilidad es derivada (stock + plazo de encargo), así que no se
