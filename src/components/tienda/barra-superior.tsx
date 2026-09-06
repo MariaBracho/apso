@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/marca/isotipo";
+import { MenuCuenta } from "@/components/tienda/menu-cuenta";
 import type { Categoria } from "@/lib/catalogo";
 import { formatearTasa } from "@/lib/formato";
 
@@ -71,14 +72,7 @@ export function BarraSuperior({
           </Link>
 
           {sesion ? (
-            <Link
-              href="/mis-pedidos"
-              className="bg-hueso text-violeta font-display flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold transition-opacity hover:opacity-90"
-              aria-label={`Mis pedidos, sesión de ${sesion.nombre}`}
-              title={sesion.nombre}
-            >
-              {iniciales(sesion.nombre)}
-            </Link>
+            <MenuCuenta nombre={sesion.nombre} />
           ) : (
             <Link
               href="/entrar"
@@ -91,14 +85,6 @@ export function BarraSuperior({
       </div>
     </header>
   );
-}
-
-function iniciales(nombre: string): string {
-  return nombre
-    .split(" ")
-    .slice(0, 2)
-    .map((parte) => parte[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 function TasaDelDia({ tasa }: { tasa: number | null }) {
