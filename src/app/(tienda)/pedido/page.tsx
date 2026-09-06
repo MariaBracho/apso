@@ -4,12 +4,17 @@ import { redirect } from "next/navigation";
 import { FormularioPedido } from "@/app/(tienda)/pedido/formulario";
 import { obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
+import { obtenerSesion } from "@/lib/sesion";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 
 export const metadata: Metadata = { title: "Tu pedido" };
 
 export default async function PaginaPedido() {
-  const [items, tasa] = await Promise.all([leerCarrito(), obtenerTasaVigente()]);
+  const [items, tasa, sesion] = await Promise.all([
+    leerCarrito(),
+    obtenerTasaVigente(),
+    obtenerSesion(),
+  ]);
 
   if (items.length === 0) redirect("/carrito");
 
@@ -25,7 +30,10 @@ export default async function PaginaPedido() {
       </p>
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_320px]">
-        <FormularioPedido />
+        <FormularioPedido
+          nombre={sesion?.nombre}
+          correo={sesion?.correo}
+        />
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="bg-superficie rounded-panel p-5">

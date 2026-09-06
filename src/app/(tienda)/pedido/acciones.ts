@@ -2,38 +2,17 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { z } from "zod";
-
 import {
   COOKIE_CARRITO,
   leerCarrito,
   obtenerCarritoActual,
 } from "@/lib/carrito";
+import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
 import { COOKIE_PEDIDO } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 
 export type EstadoPedido = { error: string } | undefined;
-
-const esquemaPedido = z.object({
-  cliente_nombre: z.string().trim().min(2, "Escribe tu nombre."),
-  // El +58 es fijo en la interfaz; aquí llegan los 10 dígitos.
-  whatsapp: z
-    .string()
-    .regex(/^[0-9]{10}$/, "El WhatsApp son 10 dígitos, sin el 0 ni el +58."),
-  cliente_correo: z.email("Ese correo no parece válido.").nullable(),
-  entrega: z.enum(["punto_fijo", "envio_nacional"]),
-  ciudad_destino: z.string().trim().nullable(),
-  metodo_pago: z.enum([
-    "pago_movil",
-    "transferencia_bs",
-    "zelle",
-    "binance",
-    "efectivo",
-    "tarjeta_internacional",
-  ]),
-  para_que_lo_usa: z.string().trim().nullable(),
-});
 
 /**
  * Crea el pedido.
@@ -47,29 +26,12 @@ const esquemaPedido = z.object({
  * WhatsApp, que es donde este negocio cierra.
  */
 export async function enviarPedido(
-  _previo: EstadoPedido,
-  datos: FormData,
+  datos: DatosPedido,
 ): Promise<EstadoPedido> {
-  const crudo = {
-    cliente_nombre: String(datos.get("cliente_nombre") ?? "").trim(),
-    whatsapp: String(datos.get("whatsapp") ?? "").replace(/[^0-9]/g, ""),
-    cliente_correo: vacioANulo(datos.get("cliente_correo")),
-    entrega: String(datos.get("entrega") ?? "punto_fijo"),
-    ciudad_destino: vacioANulo(datos.get("ciudad_destino")),
-    metodo_pago: String(datos.get("metodo_pago") ?? "pago_movil"),
-    para_que_lo_usa: vacioANulo(datos.get("para_que_lo_usa")),
-  };
+  const resultado = await validar(esquemaPedido, datos);
+  if (!resultado.ok) return { error: resultado.error };
 
-  const validado = esquemaPedido.safeParse(crudo);
-  if (!validado.success) {
-    return { error: validado.error.issues[0]?.message ?? "Revisa los datos." };
-  }
-
-  const pedido = validado.data;
-
-  if (pedido.entrega === "envio_nacional" && !pedido.ciudad_destino) {
-    return { error: "Dinos a qué ciudad enviamos." };
-  }
+  const pedido = resultado.valores;
 
   const items = await leerCarrito();
   if (items.length === 0) {
@@ -181,9 +143,4 @@ export async function enviarPedido(
   almacen.delete(COOKIE_CARRITO);
 
   redirect("/pedido/confirmado");
-}
-
-function vacioANulo(valor: FormDataEntryValue | null): string | null {
-  const texto = String(valor ?? "").trim();
-  return texto === "" ? null : texto;
 }

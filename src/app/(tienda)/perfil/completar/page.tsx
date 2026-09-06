@@ -16,7 +16,9 @@ export default async function PaginaCompletarPerfil({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sesion = await obtenerSesion();
-  if (!sesion) redirect("/entrar");
+  // Se dice por qué se vuelve atrás. Un redirect callado deja a la persona
+  // en la pantalla de entrada sin entender qué falló ni qué hacer distinto.
+  if (!sesion) redirect("/entrar?error=sesion_perdida");
 
   const params = await searchParams;
   const destino =

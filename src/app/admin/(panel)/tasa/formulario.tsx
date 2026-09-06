@@ -1,61 +1,83 @@
 "use client";
 
-import { useActionState } from "react";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { fijarTasa } from "@/app/admin/(panel)/tasa/acciones";
+import {
+  Campo,
+  ErrorServidor,
+  estiloEntrada,
+  estiloEntradaMal,
+} from "@/components/formulario/campos";
+import { type DatosTasa, esquemaTasa } from "@/lib/esquemas";
 
 export function FormularioTasa() {
-  const [estado, accion, pendiente] = useActionState(fijarTasa, undefined);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<DatosTasa>({
+    resolver: yupResolver(esquemaTasa),
+    defaultValues: { valor: 0, fuente: "bcv" },
+    mode: "onBlur",
+  });
+
+  const [errorServidor, setErrorServidor] = useState<string | null>(null);
+
+  const enviar = handleSubmit(async (datos) => {
+    setErrorServidor(null);
+
+    const resultado = await fijarTasa(datos);
+    if (resultado && "error" in resultado) {
+      setErrorServidor(resultado.error);
+      return;
+    }
+
+    reset({ valor: 0, fuente: datos.fuente });
+    toast.success(`Tasa fijada en Bs ${datos.valor}`, {
+      description: "Ya se ve en toda la tienda.",
+    });
+  });
 
   return (
-    <form action={accion} className="space-y-4">
+    <form onSubmit={enviar} noValidate className="space-y-4">
       <h2 className="etiqueta text-texto-3 text-[10px]">Fijar tasa nueva</h2>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="flex-1">
-          <span className="text-texto-2 mb-1.5 block text-sm">
-            Bolívares por dólar
-          </span>
-          <input
-            name="valor"
-            required
-            inputMode="decimal"
-            placeholder="36,50"
-            className="bg-superficie-2 border-borde text-texto placeholder:text-texto-meta focus:border-cian rounded-tarjeta w-full border px-3.5 py-2.5 text-sm outline-none"
-          />
-        </label>
+        <div className="flex-1">
+          <Campo etiqueta="Bolívares por dólar" error={errors.valor?.message}>
+            <input
+              {...register("valor")}
+              inputMode="decimal"
+              placeholder="807,39"
+              className={errors.valor ? estiloEntradaMal : estiloEntrada}
+            />
+          </Campo>
+        </div>
 
-        <label className="sm:w-40">
-          <span className="text-texto-2 mb-1.5 block text-sm">Fuente</span>
-          <select
-            name="fuente"
-            defaultValue="bcv"
-            className="bg-superficie-2 border-borde text-texto focus:border-cian rounded-tarjeta w-full border px-3.5 py-2.5 text-sm outline-none"
-          >
-            <option value="bcv">BCV</option>
-            <option value="promedio">Promedio</option>
-            <option value="manual">A mano</option>
-          </select>
-        </label>
+        <div className="sm:w-40">
+          <Campo etiqueta="Fuente">
+            <select {...register("fuente")} className={estiloEntrada}>
+              <option value="bcv">BCV</option>
+              <option value="promedio">Promedio</option>
+              <option value="manual">A mano</option>
+            </select>
+          </Campo>
+        </div>
       </div>
 
-      {estado && "error" in estado && (
-        <p role="alert" className="text-error text-sm">
-          {estado.error}
-        </p>
-      )}
-      {estado && "ok" in estado && (
-        <p role="status" className="text-exito text-sm">
-          Tasa actualizada. Ya se ve en toda la tienda.
-        </p>
-      )}
+      <ErrorServidor mensaje={errorServidor} />
 
       <button
         type="submit"
-        disabled={pendiente}
+        disabled={isSubmitting}
         className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
       >
-        {pendiente ? "Guardando…" : "Fijar tasa"}
+        {isSubmitting ? "Guardando…" : "Fijar tasa"}
       </button>
     </form>
   );

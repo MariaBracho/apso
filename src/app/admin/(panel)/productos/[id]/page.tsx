@@ -54,7 +54,10 @@ export default async function PaginaEditarProducto({
           marca_id: producto.marca_id,
           resumen: producto.resumen,
           descripcion: producto.descripcion,
-          especificaciones: producto.especificaciones ?? [],
+          especificaciones:
+            producto.especificaciones?.length > 0
+              ? producto.especificaciones
+              : [{ clave: "", valor: "" }],
           precio_usd: Number(producto.precio_usd),
           precio_referencia_usd:
             producto.precio_referencia_usd === null

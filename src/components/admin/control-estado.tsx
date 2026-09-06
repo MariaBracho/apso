@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { cambiarEstado } from "@/app/admin/(panel)/pedidos/acciones";
 import {
@@ -29,7 +30,6 @@ export function ControlEstado({
   inventarioDescontado: boolean;
 }) {
   const [pendiente, iniciar] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
 
@@ -39,14 +39,18 @@ export function ControlEstado({
 
   const mover = (siguiente: EstadoPedido, razon?: string) =>
     iniciar(async () => {
-      setError(null);
       const resultado = await cambiarEstado(pedidoId, siguiente, razon);
       if (resultado && "error" in resultado) {
-        setError(resultado.error);
+        toast.error(resultado.error);
         return;
       }
       setCancelando(false);
       setMotivo("");
+      // El cliente ve este mismo estado en su historial, así que el aviso
+      // confirma qué se le acaba de comunicar.
+      toast.success(`Pedido en «${NOMBRE_ESTADO[siguiente]}»`, {
+        description: "El cliente lo ve así en su seguimiento.",
+      });
     });
 
   return (
@@ -83,12 +87,6 @@ export function ControlEstado({
           ? "El inventario de este pedido ya está descontado."
           : "El inventario se descuenta al confirmar el pago, no antes."}
       </p>
-
-      {error && (
-        <p role="alert" className="text-error mt-3 text-sm">
-          {error}
-        </p>
-      )}
 
       <div className="mt-4">
         {cancelado ? (

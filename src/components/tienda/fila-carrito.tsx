@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   cambiarCantidad,
@@ -100,7 +101,12 @@ export function FilaCarrito({
           <button
             type="button"
             disabled={pendiente}
-            onClick={() => iniciar(() => quitarDelCarrito(item.id))}
+            onClick={() =>
+              iniciar(async () => {
+                await quitarDelCarrito(item.id);
+                toast(`${producto.nombre} fuera del carrito`);
+              })
+            }
             className="text-texto-meta hover:text-error text-xs transition-colors disabled:opacity-30"
           >
             Quitar

@@ -2,19 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
+import { type DatosWhatsapp, esquemaWhatsapp, validar } from "@/lib/esquemas";
 import { obtenerSesion } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
 export type EstadoPerfil = { error: string } | undefined;
-
-const esquema = z.object({
-  whatsapp: z
-    .string()
-    .regex(/^[0-9]{10}$/, "El WhatsApp son 10 dígitos, sin el 0 ni el +58."),
-  destino: z.string().startsWith("/", "Destino inválido."),
-});
 
 /**
  * Guarda el WhatsApp y reclama los pedidos que la persona hizo sin cuenta.
@@ -24,22 +17,16 @@ const esquema = z.object({
  * esto, registrarse borraría de un plumazo todo lo que compró antes.
  */
 export async function guardarWhatsapp(
-  _previo: EstadoPerfil,
-  datos: FormData,
+  datos: DatosWhatsapp,
+  destino: string,
 ): Promise<EstadoPerfil> {
   const sesion = await obtenerSesion();
-  if (!sesion) redirect("/entrar");
+  if (!sesion) redirect("/entrar?error=sesion_perdida");
 
-  const validado = esquema.safeParse({
-    whatsapp: String(datos.get("whatsapp") ?? "").replace(/[^0-9]/g, ""),
-    destino: String(datos.get("destino") ?? "/mis-pedidos"),
-  });
+  const resultado = await validar(esquemaWhatsapp, datos);
+  if (!resultado.ok) return { error: resultado.error };
 
-  if (!validado.success) {
-    return { error: validado.error.issues[0]?.message ?? "Revisa el número." };
-  }
-
-  const numero = `+58${validado.data.whatsapp}`;
+  const numero = `+58${resultado.valores.whatsapp}`;
   const supabase = await crearClienteServidor();
 
   const { error } = await supabase
@@ -62,5 +49,5 @@ export async function guardarWhatsapp(
   await supabase.rpc("reclamar_pedidos_por_whatsapp");
 
   revalidatePath("/mis-pedidos");
-  redirect(validado.data.destino);
+  redirect(destino.startsWith("/") ? destino : "/mis-pedidos");
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { ajustarStock } from "@/app/admin/(panel)/pedidos/acciones";
 
@@ -22,19 +23,26 @@ export function EditorStock({
 }) {
   const [valor, setValor] = useState(String(stock));
   const [editando, setEditando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
   const guardar = () =>
     iniciar(async () => {
-      setError(null);
       const numero = Number(valor);
-      const resultado = await ajustarStock(id, numero);
-      if (resultado && "error" in resultado) {
-        setError(resultado.error);
+
+      if (numero === stock) {
+        setEditando(false);
         return;
       }
+
+      const resultado = await ajustarStock(id, numero);
+      if (resultado && "error" in resultado) {
+        toast.error(resultado.error);
+        setValor(String(stock));
+        return;
+      }
+
       setEditando(false);
+      toast.success(`${nombre}: ${stock} → ${numero} en inventario`);
     });
 
   if (!editando) {
@@ -54,27 +62,19 @@ export function EditorStock({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
-      <input
-        autoFocus
-        value={valor}
-        inputMode="numeric"
-        disabled={pendiente}
-        onChange={(e) => setValor(e.target.value.replace(/[^0-9]/g, ""))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") guardar();
-          if (e.key === "Escape") setEditando(false);
-        }}
-        onBlur={guardar}
-        aria-label={`Stock de ${nombre}`}
-        aria-invalid={error !== null}
-        className="bg-superficie-2 border-cian text-texto rounded w-14 border px-2 py-0.5 text-right text-sm outline-none"
-      />
-      {error && (
-        <span role="alert" className="text-error text-xs">
-          !
-        </span>
-      )}
-    </span>
+    <input
+      autoFocus
+      value={valor}
+      inputMode="numeric"
+      disabled={pendiente}
+      onChange={(e) => setValor(e.target.value.replace(/[^0-9]/g, ""))}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") guardar();
+        if (e.key === "Escape") setEditando(false);
+      }}
+      onBlur={guardar}
+      aria-label={`Stock de ${nombre}`}
+      className="bg-superficie-2 border-cian text-texto w-14 rounded border px-2 py-0.5 text-right text-sm outline-none"
+    />
   );
 }

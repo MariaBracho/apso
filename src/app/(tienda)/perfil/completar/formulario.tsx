@@ -1,16 +1,40 @@
 "use client";
 
-import { useActionState } from "react";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { guardarWhatsapp } from "@/app/(tienda)/perfil/completar/acciones";
+import {
+  ErrorServidor,
+  estiloEntrada,
+  estiloEntradaMal,
+} from "@/components/formulario/campos";
+import { type DatosWhatsapp, esquemaWhatsapp } from "@/lib/esquemas";
 
 export function FormularioWhatsapp({ destino }: { destino: string }) {
-  const [estado, accion, pendiente] = useActionState(guardarWhatsapp, undefined);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<DatosWhatsapp>({
+    resolver: yupResolver(esquemaWhatsapp),
+    defaultValues: { whatsapp: "" },
+    mode: "onBlur",
+  });
+
+  const [errorServidor, setErrorServidor] = useState<string | null>(null);
+
+  const enviar = handleSubmit(async (datos) => {
+    setErrorServidor(null);
+    const resultado = await guardarWhatsapp(datos, destino);
+    if (resultado && "error" in resultado) {
+      setErrorServidor(resultado.error);
+    }
+  });
 
   return (
-    <form action={accion} className="space-y-4">
-      <input type="hidden" name="destino" value={destino} />
-
+    <form onSubmit={enviar} noValidate className="space-y-4">
       <label className="block">
         <span className="text-texto-2 mb-1.5 block text-sm">
           ¿A qué WhatsApp te escribimos?
@@ -22,34 +46,34 @@ export function FormularioWhatsapp({ destino }: { destino: string }) {
             +58
           </span>
           <input
-            name="whatsapp"
-            required
+            {...register("whatsapp")}
             autoFocus
             inputMode="numeric"
             maxLength={10}
             placeholder="4246056110"
             autoComplete="tel-national"
-            className="bg-superficie-2 border-borde text-texto placeholder:text-texto-meta focus:border-cian w-full rounded-r-[0.875rem] border px-3.5 py-2.5 text-sm outline-none"
+            className={`${errors.whatsapp ? estiloEntradaMal : estiloEntrada} rounded-l-none`}
           />
         </div>
+        {errors.whatsapp ? (
+          <span role="alert" className="text-error mt-1 block text-xs">
+            {errors.whatsapp.message}
+          </span>
+        ) : (
+          <span className="text-texto-meta mt-1 block text-xs leading-relaxed">
+            Es por donde se atiende todo el pedido. No lo usamos para nada más.
+          </span>
+        )}
       </label>
 
-      <p className="text-texto-meta text-xs leading-relaxed">
-        Es por donde se atiende todo el pedido. No lo usamos para nada más.
-      </p>
-
-      {estado?.error && (
-        <p role="alert" className="text-error text-sm">
-          {estado.error}
-        </p>
-      )}
+      <ErrorServidor mensaje={errorServidor} />
 
       <button
         type="submit"
-        disabled={pendiente}
+        disabled={isSubmitting}
         className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 w-full px-6 py-3.5 text-sm font-semibold transition-colors disabled:opacity-50"
       >
-        {pendiente ? "Guardando…" : "Listo"}
+        {isSubmitting ? "Guardando…" : "Listo"}
       </button>
     </form>
   );

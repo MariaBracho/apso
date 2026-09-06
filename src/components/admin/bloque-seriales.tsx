@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   anotarSerial,
@@ -56,20 +57,22 @@ export function BloqueSeriales({ items }: { items: Item[] }) {
 
 function LineaSeriales({ item }: { item: Item }) {
   const [valor, setValor] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
   const completo = item.seriales.length >= item.cantidad;
 
   const guardar = () =>
     iniciar(async () => {
-      setError(null);
       const resultado = await anotarSerial(item.id, valor);
       if (resultado && "error" in resultado) {
-        setError(resultado.error);
+        toast.error(resultado.error);
         return;
       }
+      const guardado = valor;
       setValor("");
+      toast.success(`Serial ${guardado} anotado`, {
+        description: "Es lo que le sostiene la garantía al cliente.",
+      });
     });
 
   return (
@@ -91,7 +94,12 @@ function LineaSeriales({ item }: { item: Item }) {
               <button
                 type="button"
                 disabled={pendiente}
-                onClick={() => iniciar(() => borrarSerial(s.id))}
+                onClick={() =>
+                  iniciar(async () => {
+                    await borrarSerial(s.id);
+                    toast(`Serial ${s.serial} quitado`);
+                  })
+                }
                 aria-label={`Quitar el serial ${s.serial}`}
                 className="text-texto-meta hover:text-error text-xs transition-colors"
               >
@@ -128,11 +136,6 @@ function LineaSeriales({ item }: { item: Item }) {
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="text-error mt-1.5 text-xs">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

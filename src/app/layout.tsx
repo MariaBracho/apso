@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Sora, Karla } from "next/font/google";
+
+import { Avisos } from "@/components/avisos";
 import "./globals.css";
 
 // Sora: titulares y cifras de precio. Karla: cuerpo, labels y botones.
@@ -36,6 +38,7 @@ export default function RootLayout({
     >
       <body className="bg-fondo text-texto flex min-h-full flex-col">
         {children}
+        <Avisos />
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import {
   type EstadoPedido,
@@ -9,6 +8,7 @@ import {
   esCancelado,
   inventarioDeberiaEstarDescontado,
 } from "@/lib/estados";
+import { esquemaSerial, validar } from "@/lib/esquemas";
 import { exigirAdmin } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -156,12 +156,6 @@ async function ajustarInventario(
   return null;
 }
 
-const esquemaSerial = z
-  .string()
-  .trim()
-  .min(3, "Un serial tiene al menos 3 caracteres.")
-  .max(100);
-
 /**
  * Anota el serial de una unidad.
  *
@@ -174,15 +168,13 @@ export async function anotarSerial(
 ): Promise<EstadoAccion> {
   const sesion = await exigirAdmin();
 
-  const validado = esquemaSerial.safeParse(serial);
-  if (!validado.success) {
-    return { error: validado.error.issues[0]?.message ?? "Serial inválido." };
-  }
+  const validado = await validar(esquemaSerial, { serial });
+  if (!validado.ok) return { error: validado.error };
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.from("seriales").insert({
     pedido_item_id: pedidoItemId,
-    serial: validado.data,
+    serial: validado.valores.serial,
     anotado_por: sesion.id,
   });
 

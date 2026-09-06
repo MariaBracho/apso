@@ -2,25 +2,19 @@
 
 import { redirect } from "next/navigation";
 
+import { type DatosEntrada, esquemaEntrada, validar } from "@/lib/esquemas";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
 export type EstadoEntrada = { error: string } | undefined;
 
-export async function entrar(
-  _estadoPrevio: EstadoEntrada,
-  datos: FormData,
-): Promise<EstadoEntrada> {
-  const correo = String(datos.get("correo") ?? "").trim();
-  const clave = String(datos.get("clave") ?? "");
-
-  if (!correo || !clave) {
-    return { error: "Faltan el correo o la contraseña." };
-  }
+export async function entrar(datos: DatosEntrada): Promise<EstadoEntrada> {
+  const resultado = await validar(esquemaEntrada, datos);
+  if (!resultado.ok) return { error: resultado.error };
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.signInWithPassword({
-    email: correo,
-    password: clave,
+    email: resultado.valores.correo,
+    password: resultado.valores.clave,
   });
 
   if (error) {

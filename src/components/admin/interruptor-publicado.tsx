@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import { alternarPublicado } from "@/app/admin/(panel)/productos/acciones";
 
@@ -26,7 +27,18 @@ export function InterruptorPublicado({
       aria-checked={activo}
       aria-label={`${activo ? "Ocultar" : "Mostrar"} ${nombre} en la tienda`}
       disabled={pendiente}
-      onClick={() => iniciar(() => alternarPublicado(id, !activo))}
+      onClick={() =>
+        iniciar(async () => {
+          await alternarPublicado(id, !activo);
+          // El interruptor cambia de color, pero eso solo dice que se pulsó.
+          // El aviso confirma que el cambio llegó a la tienda.
+          toast.success(
+            activo
+              ? `${nombre} ya no se muestra en la tienda`
+              : `${nombre} ya se ve en la tienda`,
+          );
+        })
+      }
       className={`rounded-pildora inline-flex h-5 w-9 items-center transition-colors disabled:opacity-50 ${
         activo ? "bg-cian" : "bg-superficie-3"
       }`}

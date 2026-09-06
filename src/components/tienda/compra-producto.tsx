@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { agregarAlCarrito } from "@/app/(tienda)/carrito/acciones";
 import { enlaceWhatsapp } from "@/lib/contacto";
@@ -30,7 +31,6 @@ export function CompraProducto({
 }) {
   const router = useRouter();
   const [cantidad, setCantidad] = useState(1);
-  const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
   // Sin stock se puede pedir igual: se trae por encargo.
@@ -90,25 +90,30 @@ export function CompraProducto({
         disabled={pendiente}
         onClick={() =>
           iniciar(async () => {
-            setError(null);
             const resultado = await agregarAlCarrito(productoId, cantidad);
             if (resultado && "error" in resultado) {
-              setError(resultado.error);
+              toast.error(resultado.error);
               return;
             }
-            router.push("/carrito");
+            // No se navega al carrito: el flujo 02 dice que tras agregar se
+            // puede seguir viendo o ir al carrito. Arrastrar a la persona
+            // fuera del catálogo le corta la compra.
+            toast.success(
+              cantidad === 1 ? "Agregado al carrito" : `${cantidad} agregados al carrito`,
+              {
+                description: nombre,
+                action: {
+                  label: "Ver carrito",
+                  onClick: () => router.push("/carrito"),
+                },
+              },
+            );
           })
         }
         className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 w-full px-6 py-3.5 text-sm font-semibold transition-colors disabled:opacity-50"
       >
         {pendiente ? "Agregando…" : "Agregar al carrito"}
       </button>
-
-      {error && (
-        <p role="alert" className="text-error text-center text-sm">
-          {error}
-        </p>
-      )}
 
       <a
         href={enlaceWhatsapp(mensaje)}

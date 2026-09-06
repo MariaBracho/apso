@@ -8,6 +8,21 @@ import { obtenerSesion } from "@/lib/sesion";
 
 export const metadata: Metadata = { title: "Entrar" };
 
+/**
+ * Cada fallo dice qué pasó y qué hacer. "Algo salió mal" deja a la persona
+ * repitiendo lo mismo sin saber si el problema es suyo o nuestro.
+ */
+const MENSAJE_ERROR: Record<string, string> = {
+  sesion_perdida:
+    "Entraste bien, pero la sesión no llegó a guardarse. Suele ser el navegador bloqueando cookies. Vuelve a intentarlo.",
+  sin_codigo: "Google no devolvió la confirmación. Vuelve a intentarlo.",
+  intercambio:
+    "No pudimos validar tu ingreso con Google. Si vuelve a pasar, escríbenos por WhatsApp y lo resolvemos.",
+  sin_sesion: "Google confirmó tu cuenta pero la sesión no se abrió. Inténtalo otra vez.",
+  google: "No se pudo abrir Google. Revisa tu conexión y vuelve a intentarlo.",
+  generico: "No se pudo completar el ingreso. Inténtalo otra vez.",
+};
+
 export default async function PaginaEntrar({
   searchParams,
 }: {
@@ -17,8 +32,9 @@ export default async function PaginaEntrar({
   if (sesion) redirect("/mis-pedidos");
 
   const params = await searchParams;
-  const destino = typeof params.destino === "string" ? params.destino : "/mis-pedidos";
-  const fallo = typeof params.error === "string";
+  const destino =
+    typeof params.destino === "string" ? params.destino : "/mis-pedidos";
+  const fallo = typeof params.error === "string" ? params.error : null;
 
   return (
     <div className="mx-auto max-w-md px-6 py-20">
@@ -31,8 +47,11 @@ export default async function PaginaEntrar({
       </p>
 
       {fallo && (
-        <p role="alert" className="text-error mt-6 text-sm">
-          No se pudo completar el ingreso. Inténtalo otra vez.
+        <p
+          role="alert"
+          className="border-error/40 bg-error/10 rounded-tarjeta text-texto-2 mt-6 border p-4 text-sm leading-relaxed"
+        >
+          {MENSAJE_ERROR[fallo] ?? MENSAJE_ERROR.generico}
         </p>
       )}
 
