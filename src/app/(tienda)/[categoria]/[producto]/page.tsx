@@ -105,20 +105,32 @@ function Galeria({ producto }: { producto: ProductoFicha }) {
       {/* La foto se acota: sin tope, en pantallas anchas la columna estira el
           4/3 hasta empujar las especificaciones fuera de la vista. */}
       <div className="flex max-w-[620px] gap-4">
-        <div className="hidden w-20 shrink-0 flex-col gap-3 sm:flex">
-          {["FOTO 1", "FOTO 2", "FOTO 3"].map((etiqueta) => (
-            <FotoProducto
-              key={etiqueta}
-              alto="aspect-square"
-              etiqueta={etiqueta}
-            />
-          ))}
-        </div>
+        {/* La columna de miniaturas solo aparece si hay más de una foto: con
+            una sola, repetir el mismo recuadro tres veces no aporta nada. */}
+        {producto.imagenes.length > 1 && (
+          <div className="hidden w-20 shrink-0 flex-col gap-3 sm:flex">
+            {producto.imagenes.slice(0, 4).map((imagen, i) => (
+              <FotoProducto
+                key={imagen.url}
+                url={imagen.url}
+                alt={imagen.alt ?? `${producto.nombre}, foto ${i + 1}`}
+                alto="aspect-square"
+                tamanos="80px"
+              />
+            ))}
+          </div>
+        )}
 
         <div className="relative min-w-0 flex-1">
-          <FotoProducto alto="aspect-[4/3]" />
+          <FotoProducto
+            url={producto.imagenes[0]?.url}
+            alt={producto.imagenes[0]?.alt ?? producto.nombre}
+            alto="aspect-[4/3]"
+            prioridad
+            tamanos="(min-width: 640px) 520px, 100vw"
+          />
           <span className="absolute top-4 left-4">
-            <BadgeDisponibilidad producto={producto} detallado />
+            <BadgeDisponibilidad producto={producto} detallado sobreFoto />
           </span>
         </div>
       </div>

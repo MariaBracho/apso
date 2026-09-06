@@ -13,6 +13,7 @@ import {
   estiloEntrada,
   estiloEntradaMal,
 } from "@/components/formulario/campos";
+import { type Foto, GestorFotos } from "@/components/admin/gestor-fotos";
 import { type DatosProducto, esquemaProducto } from "@/lib/esquemas";
 import { generarSlug } from "@/lib/texto";
 
@@ -43,12 +44,17 @@ export function FormularioProducto({
   categorias,
   marcas,
   etiquetaEnvio,
+  productoId,
+  fotos = [],
 }: {
   accion: (datos: DatosProducto) => Promise<EstadoProducto>;
   valores: DatosProducto;
   categorias: OpcionSelect[];
   marcas: OpcionSelect[];
   etiquetaEnvio: string;
+  /** Solo al editar: las fotos necesitan un producto que ya exista. */
+  productoId?: string;
+  fotos?: Foto[];
 }) {
   const {
     register,
@@ -253,6 +259,23 @@ export function FormularioProducto({
             </button>
           </div>
         </Campo>
+      </Seccion>
+
+      <Seccion
+        titulo="Fotos"
+        nota={
+          productoId
+            ? "La primera es la que sale en la tarjeta del catálogo, así que ponla de primera a propósito."
+            : "Podrás agregarlas en cuanto guardes el producto: las fotos necesitan que exista primero."
+        }
+      >
+        {productoId ? (
+          <GestorFotos productoId={productoId} fotos={fotos} />
+        ) : (
+          <p className="text-texto-meta border-borde rounded-tarjeta border border-dashed px-4 py-6 text-center text-xs">
+            Guarda el producto y te traigo aquí mismo para subirlas.
+          </p>
+        )}
       </Seccion>
 
       <Seccion titulo="Procedencia y garantía">

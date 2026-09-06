@@ -66,12 +66,18 @@ export async function crearProducto(
   if (!preparado.ok) return { error: preparado.error };
 
   const supabase = await crearClienteServidor();
-  const { error } = await supabase.from("productos").insert(preparado.fila);
+  const { data: creado, error } = await supabase
+    .from("productos")
+    .insert(preparado.fila)
+    .select("id")
+    .single();
 
   if (error) return { error: mensajeDeError(error.code, error.message) };
 
   revalidatePath("/admin/productos");
-  redirect("/admin/productos");
+  // A la edición y no al listado: las fotos necesitan un producto que ya
+  // exista, así que este es el momento natural para agregarlas.
+  redirect(`/admin/productos/${creado.id}`);
 }
 
 export async function actualizarProducto(

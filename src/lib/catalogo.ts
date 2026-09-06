@@ -23,7 +23,8 @@ const CAMPOS_LISTADO = `
   id, slug, nombre, resumen, precio_usd, precio_referencia_usd,
   stock, dias_encargo,
   categoria:categorias!inner (slug, nombre),
-  marca:marcas (slug, nombre)
+  marca:marcas (slug, nombre),
+  imagenes:producto_imagenes (url, alt)
 `;
 
 const CAMPOS_FICHA = `
@@ -31,7 +32,8 @@ const CAMPOS_FICHA = `
   precio_usd, precio_referencia_usd, stock, dias_encargo,
   condicion, procedencia, garantia_meses, garantia_vitalicia,
   categoria:categorias!inner (slug, nombre),
-  marca:marcas (slug, nombre)
+  marca:marcas (slug, nombre),
+  imagenes:producto_imagenes (url, alt)
 `;
 
 
@@ -63,7 +65,13 @@ export async function obtenerTasaVigente(): Promise<number | null> {
   return Number(data.valor);
 }
 
-/** Categorías raíz, para el nav de la barra superior. */
+/**
+ * Categorías raíz, para el nav de la barra superior.
+ *
+ * `activa` se respeta en todas las consultas de este archivo: apagar una
+ * categoría tiene que sacarla del menú y dejar su dirección sin página. Si solo
+ * saliera del menú, la sección seguiría en pie para quien tenga el enlace.
+ */
 export async function obtenerCategoriasRaiz(): Promise<Categoria[]> {
   const supabase = await crearClienteServidor();
 
@@ -71,6 +79,7 @@ export async function obtenerCategoriasRaiz(): Promise<Categoria[]> {
     .from("categorias")
     .select("id, slug, nombre, padre_id")
     .is("padre_id", null)
+    .eq("activa", true)
     .order("orden");
 
   avisarFallo("categorías raíz", error);
@@ -87,6 +96,7 @@ export async function obtenerCategoriaPorSlug(
     .from("categorias")
     .select("id, slug, nombre, padre_id")
     .eq("slug", slug)
+    .eq("activa", true)
     .maybeSingle();
 
   avisarFallo(`categoría ${slug}`, error);
@@ -119,6 +129,7 @@ export async function obtenerSubcategorias(
     .from("categorias")
     .select("id, slug, nombre, padre_id")
     .eq("padre_id", padreId)
+    .eq("activa", true)
     .order("orden");
 
   if (error || !data) return [];

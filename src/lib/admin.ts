@@ -156,6 +156,19 @@ export async function obtenerPedido(id: string): Promise<PedidoDetalle | null> {
   return data;
 }
 
+/** Fotos de un producto, en el orden en que se muestran. */
+export async function listarFotos(productoId: string) {
+  const supabase = await crearClienteServidor();
+
+  const { data } = await supabase
+    .from("producto_imagenes")
+    .select("id, url, orden")
+    .eq("producto_id", productoId)
+    .order("orden");
+
+  return data ?? [];
+}
+
 export async function listarCategorias() {
   const supabase = await crearClienteServidor();
 

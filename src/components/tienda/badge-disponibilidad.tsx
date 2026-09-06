@@ -10,17 +10,32 @@ import { type Disponibilidad, disponibilidadDe } from "@/lib/producto";
 export function BadgeDisponibilidad({
   producto,
   detallado = false,
+  sobreFoto = false,
 }: {
   producto: { stock: number; dias_encargo: number | null };
   detallado?: boolean;
+  /**
+   * Encima de una foto el tinte translúcido desaparece: contra una imagen clara
+   * el verde sobre verde al 15 % no se lee. Se cambia por un fondo opaco con el
+   * color de estado en el texto y el borde, que aguanta cualquier fotografía.
+   */
+  sobreFoto?: boolean;
 }) {
   const estado: Disponibilidad = disponibilidadDe(producto);
 
-  const estilos: Record<Disponibilidad, string> = {
+  const tintado: Record<Disponibilidad, string> = {
     en_stock: "bg-exito/15 text-exito",
     por_pedido: "bg-ambar/15 text-ambar",
     sin_stock: "bg-superficie-3 text-texto-meta",
   };
+
+  const opaco: Record<Disponibilidad, string> = {
+    en_stock: "bg-fondo text-exito border border-exito/40",
+    por_pedido: "bg-fondo text-ambar border border-ambar/40",
+    sin_stock: "bg-fondo text-texto-meta border border-borde",
+  };
+
+  const estilos = sobreFoto ? opaco : tintado;
 
   return (
     <span

@@ -178,7 +178,7 @@ values (
   crypt('apso.admin.local', gen_salt('bf')),
   now(), now(), now(),
   '{"provider": "email", "providers": ["email"]}'::jsonb,
-  '{"full_name": "José M."}'::jsonb,
+  '{"full_name": "Joseph Bracho"}'::jsonb,
   '', '', '', ''
 );
 

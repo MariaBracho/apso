@@ -1,17 +1,44 @@
+import Image from "next/image";
+
 /**
- * Marco de foto de producto.
+ * Foto de producto, con respaldo.
  *
- * Todavía no hay fotografía real: el handoff de diseño usa un recuadro hueso
- * con la palabra "FOTO" como marcador. Se mantiene igual a propósito, para
- * que se vea qué falta en vez de rellenar con una imagen de archivo.
+ * Cuando todavía no hay fotografía, se dibuja el recuadro hueso con la palabra
+ * «FOTO» del handoff de diseño. Es deliberado: deja ver qué falta en vez de
+ * rellenar con una imagen de archivo que no es el producto.
  */
 export function FotoProducto({
+  url,
+  alt,
   alto = "aspect-[4/3]",
   etiqueta = "FOTO",
+  prioridad = false,
+  tamanos = "(min-width: 1280px) 320px, (min-width: 768px) 33vw, 50vw",
 }: {
+  url?: string | null;
+  alt?: string;
   alto?: string;
   etiqueta?: string;
+  prioridad?: boolean;
+  tamanos?: string;
 }) {
+  if (url) {
+    return (
+      <div
+        className={`bg-hueso ${alto} relative w-full overflow-hidden rounded-[10px]`}
+      >
+        <Image
+          src={url}
+          alt={alt ?? ""}
+          fill
+          sizes={tamanos}
+          priority={prioridad}
+          className="object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`bg-hueso ${alto} flex w-full items-center justify-center overflow-hidden rounded-[10px]`}

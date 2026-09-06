@@ -6,6 +6,7 @@ import { actualizarProducto } from "@/app/admin/(panel)/productos/acciones";
 import { FormularioProducto } from "@/components/admin/formulario-producto";
 import {
   listarCategorias,
+  listarFotos,
   listarMarcas,
   obtenerProductoAdmin,
 } from "@/lib/admin";
@@ -19,10 +20,11 @@ export default async function PaginaEditarProducto({
 }) {
   const { id } = await params;
 
-  const [producto, categorias, marcas] = await Promise.all([
+  const [producto, categorias, marcas, fotos] = await Promise.all([
     obtenerProductoAdmin(id),
     listarCategorias(),
     listarMarcas(),
+    listarFotos(id),
   ]);
 
   if (!producto) notFound();
@@ -74,6 +76,8 @@ export default async function PaginaEditarProducto({
         categorias={categorias}
         marcas={marcas}
         etiquetaEnvio="Guardar cambios"
+        productoId={id}
+        fotos={fotos}
       />
     </div>
   );

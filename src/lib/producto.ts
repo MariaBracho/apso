@@ -32,6 +32,11 @@ export type Categoria = {
   padre_id: string | null;
 };
 
+export type ImagenProducto = {
+  url: string;
+  alt: string | null;
+};
+
 export type ProductoListado = {
   id: string;
   slug: string;
@@ -43,6 +48,8 @@ export type ProductoListado = {
   dias_encargo: number | null;
   categoria: CategoriaRef;
   marca: MarcaRef | null;
+  /** En orden. La primera es la que sale en la tarjeta del catálogo. */
+  imagenes: ImagenProducto[];
 };
 
 export type ProductoFicha = ProductoListado & {

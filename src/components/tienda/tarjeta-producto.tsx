@@ -30,9 +30,13 @@ export function TarjetaProducto({
       className="group bg-superficie border-borde-sutil hover:border-cian/40 rounded-tarjeta flex flex-col border p-3 transition-colors"
     >
       <div className="relative">
-        <FotoProducto />
+        <FotoProducto
+          url={producto.imagenes?.[0]?.url}
+          alt={producto.imagenes?.[0]?.alt ?? producto.nombre}
+          tamanos="(min-width: 1280px) 300px, (min-width: 768px) 30vw, 45vw"
+        />
         <span className="absolute top-2 right-2">
-          <BadgeDisponibilidad producto={producto} />
+          <BadgeDisponibilidad producto={producto} sobreFoto />
         </span>
       </div>
 
