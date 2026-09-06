@@ -12,7 +12,13 @@ import { salirDeLaCuenta } from "@/app/(tienda)/entrar/acciones";
  * dentro de esa pantalla. Hacer clic en tu propia foto y encontrar ahí tus
  * pedidos y la salida es lo que espera cualquiera.
  */
-export function MenuCuenta({ nombre }: { nombre: string }) {
+export function MenuCuenta({
+  nombre,
+  esAdmin = false,
+}: {
+  nombre: string;
+  esAdmin?: boolean;
+}) {
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
 
@@ -61,6 +67,22 @@ export function MenuCuenta({ nombre }: { nombre: string }) {
           className="bg-superficie border-borde rounded-tarjeta absolute right-0 z-40 mt-2 w-56 border p-1.5 shadow-lg"
         >
           <p className="text-texto-meta truncate px-3 py-2 text-xs">{nombre}</p>
+
+          {/* El panel va primero y separado: quien administra la tienda entra
+              por aquí a diario, y hasta ahora tenía que escribir /admin a mano. */}
+          {esAdmin && (
+            <>
+              <Link
+                href="/admin/pedidos"
+                role="menuitem"
+                onClick={() => setAbierto(false)}
+                className="text-cian hover:bg-superficie-2 block rounded-[10px] px-3 py-2 text-sm transition-colors"
+              >
+                Ir al panel
+              </Link>
+              <hr className="border-borde-sutil my-1.5" />
+            </>
+          )}
 
           <Link
             href="/mis-pedidos"

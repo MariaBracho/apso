@@ -20,7 +20,7 @@ export function BarraSuperior({
   categorias: Categoria[];
   tasa: number | null;
   enCarrito: number;
-  sesion: { nombre: string } | null;
+  sesion: { nombre: string; esAdmin: boolean } | null;
 }) {
   return (
     <header className="border-borde-sutil bg-fondo/95 sticky top-0 z-30 border-b backdrop-blur">
@@ -72,7 +72,7 @@ export function BarraSuperior({
           </Link>
 
           {sesion ? (
-            <MenuCuenta nombre={sesion.nombre} />
+            <MenuCuenta nombre={sesion.nombre} esAdmin={sesion.esAdmin} />
           ) : (
             <Link
               href="/entrar"

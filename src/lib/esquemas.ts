@@ -74,6 +74,9 @@ export const esquemaProducto = yup.object({
     .defined(),
   descripcion: yup.string().trim().nullable().transform(vacioANulo).defined(),
 
+  // Una fila a medias se descartaba en silencio al guardar: se escribía la
+  // etiqueta, se enviaba, y la especificación no aparecía en ninguna parte.
+  // Mejor rechazarla y decirlo.
   especificaciones: yup
     .array(
       yup.object({
@@ -81,7 +84,15 @@ export const esquemaProducto = yup.object({
         valor: yup.string().trim().default(""),
       }),
     )
-    .default([]),
+    .default([])
+    .test(
+      "especificacion-completa",
+      "Hay una especificación a medias. Llena la etiqueta y el valor, o quita la fila.",
+      (filas) =>
+        (filas ?? []).every(
+          (fila) => (fila.clave === "") === (fila.valor === ""),
+        ),
+    ),
 
   precio_usd: yup
     .number()
@@ -141,6 +152,31 @@ export const esquemaProducto = yup.object({
 });
 
 export type DatosProducto = yup.InferType<typeof esquemaProducto>;
+
+// ---------------------------------------------------------------------------
+// Marca
+// ---------------------------------------------------------------------------
+
+export const esquemaMarca = yup.object({
+  nombre: yup
+    .string()
+    .trim()
+    .required("Escribe el nombre de la marca.")
+    .max(60, "El nombre no puede pasar de 60 caracteres."),
+  // Se deja vacío y se deriva del nombre; solo hace falta escribirlo cuando el
+  // automático choca con otro que ya existe.
+  slug: yup
+    .string()
+    .trim()
+    .default("")
+    .test(
+      "slug-valido",
+      "Solo minúsculas, números y guiones.",
+      (valor) => valor === "" || SLUG.test(valor ?? ""),
+    ),
+});
+
+export type DatosMarca = yup.InferType<typeof esquemaMarca>;
 
 // ---------------------------------------------------------------------------
 // Tasa de cambio

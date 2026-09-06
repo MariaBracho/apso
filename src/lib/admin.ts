@@ -200,3 +200,38 @@ export async function listarMarcas() {
 
   return data ?? [];
 }
+
+export type MarcaAdmin = {
+  id: string;
+  nombre: string;
+  slug: string;
+  productos: number;
+};
+
+/**
+ * Marcas con cuántos productos cuelgan de cada una.
+ *
+ * El conteo no es adorno: la llave foránea es `on delete restrict`, así que es
+ * lo que dice de antemano cuáles se pueden borrar y cuáles no.
+ */
+export async function listarMarcasAdmin(): Promise<MarcaAdmin[]> {
+  const supabase = await crearClienteServidor();
+
+  const { data } = await supabase
+    .from("marcas")
+    .select("id, nombre, slug, productos:productos(count)")
+    .order("nombre");
+
+  if (!data) return [];
+
+  return data.map((marca) => ({
+    id: marca.id,
+    nombre: marca.nombre,
+    slug: marca.slug,
+    // PostgREST devuelve el agregado como [{ count: n }], y como arreglo vacío
+    // cuando no hay ninguno.
+    productos:
+      (marca.productos as unknown as { count: number }[] | null)?.[0]?.count ??
+      0,
+  }));
+}

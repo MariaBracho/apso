@@ -225,19 +225,34 @@ export function FormularioProducto({
         <Campo
           etiqueta="Especificaciones"
           ayuda="Se muestran en este orden, así que pon primero lo que decide la compra."
+          // Un error del arreglo entero (no de una fila) llega en `root`, no en
+          // `message`: leer solo `message` lo bloqueaba todo sin decir por qué.
+          error={
+            errors.especificaciones?.root?.message ??
+            errors.especificaciones?.message
+          }
         >
+          {/* Rejilla y no flex: `estiloEntrada` ya trae `w-full`, y al sumarle
+              anchos encima quedaban dos utilidades de ancho peleando. El segundo
+              campo pedía cero, así que al no caber se quedaba en cero y no se
+              podía escribir en él. */}
           <div className="space-y-2">
             {especs.fields.map((campo, i) => (
-              <div key={campo.id} className="flex gap-2">
+              <div
+                key={campo.id}
+                className="grid grid-cols-[2fr_3fr_auto] items-center gap-2"
+              >
                 <input
                   {...register(`especificaciones.${i}.clave`)}
                   placeholder="Capacidad"
-                  className={`${estiloEntrada} w-2/5`}
+                  aria-label={`Especificación ${i + 1}, etiqueta`}
+                  className={estiloEntrada}
                 />
                 <input
                   {...register(`especificaciones.${i}.valor`)}
                   placeholder="2 × 16 GB"
-                  className={`${estiloEntrada} flex-1`}
+                  aria-label={`Especificación ${i + 1}, valor`}
+                  className={estiloEntrada}
                 />
                 <button
                   type="button"

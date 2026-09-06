@@ -28,11 +28,20 @@ export async function agregarAlCarrito(
 
   const supabase = crearClienteServicio();
 
-  const { data: producto } = await supabase
+  const { data: producto, error: fallo } = await supabase
     .from("productos")
     .select("id, precio_usd, stock, activo")
     .eq("id", productoId)
     .maybeSingle();
+
+  // Que la consulta falle no es lo mismo que el producto no exista, y decirle
+  // «ya no está disponible» a quien mira el producto en pantalla es mentira:
+  // manda a buscar el fallo en el inventario cuando está en la conexión o en
+  // las credenciales del servidor.
+  if (fallo) {
+    console.error(`[carrito] no se pudo leer el producto: ${fallo.message}`);
+    return { error: "No se pudo agregar al carrito. Intenta de nuevo." };
+  }
 
   if (!producto || !producto.activo) {
     return { error: "Ese producto ya no está disponible." };
