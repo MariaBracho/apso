@@ -1,7 +1,22 @@
 import "server-only";
 
-import { CORREO_PEDIDOS, SITIO } from "@/lib/contacto";
+import { SITIO } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
+
+/**
+ * A quién le llega el aviso. Separados por coma si son varios.
+ *
+ * Va por variable de entorno y no fijo en el código porque Resend, mientras el
+ * dominio no esté verificado, solo entrega al correo dueño de la cuenta. Eso
+ * obliga a apuntar el aviso a esa dirección para poder probar, y a moverlo
+ * después sin tocar el código.
+ */
+function destinatarios(): string[] {
+  return (process.env.CORREO_PEDIDOS ?? "josephbrachovillanueva2@gmail.com")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
 
 /**
  * Aviso por correo de cada pedido nuevo.
@@ -53,7 +68,7 @@ export async function avisarPedidoNuevo(pedido: ResumenPedido): Promise<void> {
       },
       body: JSON.stringify({
         from: remitente,
-        to: [CORREO_PEDIDOS],
+        to: destinatarios(),
         // El asunto lleva lo que se necesita para decidir si abrirlo ya o
         // después: quién y cuánto.
         subject: `Pedido ${pedido.numero} · ${pedido.clienteNombre} · ${formatearUsd(pedido.totalUsd)}`,
@@ -69,6 +84,14 @@ export async function avisarPedidoNuevo(pedido: ResumenPedido): Promise<void> {
       console.error(
         `[correo] ${pedido.numero} rechazado por Resend (${respuesta.status}): ${detalle}`,
       );
+      // El 403 con el remitente de pruebas siempre es lo mismo, y el mensaje de
+      // Resend no lo dice claro: hay que verificar el dominio o el aviso solo
+      // puede ir al correo dueño de la cuenta.
+      if (respuesta.status === 403) {
+        console.error(
+          "[correo] Con onboarding@resend.dev solo se entrega al correo dueño de la cuenta de Resend. Verifica apso.store en Resend y cambia CORREO_REMITENTE.",
+        );
+      }
     }
   } catch (error) {
     // Se traga el fallo a propósito: esto corre después de responderle al
