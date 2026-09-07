@@ -20,3 +20,8 @@ export const NOMBRE_PAGO: Record<string, string> = {
   efectivo: "Efectivo",
   tarjeta_internacional: "Tarjeta internacional",
 };
+
+export const NOMBRE_ENTREGA: Record<string, string> = {
+  punto_fijo: "En Punto Fijo",
+  envio_nacional: "Envío nacional",
+};

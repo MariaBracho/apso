@@ -25,7 +25,10 @@ export function BarraSuperior({
   return (
     <header className="border-borde-sutil bg-fondo/95 sticky top-0 z-30 border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-6">
-        <Link href="/" aria-label="apso, ir al inicio">
+        {/* Al catálogo y no a la portada: quien ya está dentro y toca el logo
+            quiere volver a los productos, no a leer otra vez de qué va la
+            tienda. La portada sigue en `/` para quien llega por primera vez. */}
+        <Link href="/componentes" aria-label="apso, ver el catálogo">
           <Logo />
         </Link>
 

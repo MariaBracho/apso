@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import {
   COOKIE_CARRITO,
   leerCarrito,
@@ -10,7 +11,8 @@ import {
 import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
 import { preciosDe, precioSegunPago } from "@/lib/precio";
 import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
-import { COOKIE_PEDIDO } from "@/lib/pedido";
+import { avisarPedidoNuevo } from "@/lib/correo";
+import { COOKIE_PEDIDO, NOMBRE_ENTREGA, NOMBRE_PAGO } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 
@@ -136,6 +138,29 @@ export async function enviarPedido(
     pedido_id: creado.id,
     descripcion: "Pedido recibido desde la app",
     estado_nuevo: "por_confirmar",
+  });
+
+  // Va en `after` para que corra una vez respondido: el cliente no tiene por
+  // qué esperar a que un proveedor de correo conteste, y si ese proveedor está
+  // caído el pedido ya está guardado igual.
+  after(async () => {
+    await avisarPedidoNuevo({
+      numero: creado.numero,
+      clienteNombre: sesion?.nombre ?? pedido.cliente_nombre,
+      clienteWhatsapp: `+58${pedido.whatsapp}`,
+      clienteCorreo: pedido.cliente_correo,
+      entrega: NOMBRE_ENTREGA[pedido.entrega] ?? pedido.entrega,
+      ciudadDestino: pedido.ciudad_destino,
+      metodoPago: NOMBRE_PAGO[pedido.metodo_pago] ?? pedido.metodo_pago,
+      paraQueLoUsa: pedido.para_que_lo_usa,
+      totalUsd: subtotalUsd,
+      tasa,
+      items: items.map((item) => ({
+        nombre: item.producto.nombre,
+        cantidad: item.cantidad,
+        precioUsd: precioDe(item.producto.precio_usd),
+      })),
+    });
   });
 
   // El carrito se vacía y se recuerda el pedido para poder mostrar la

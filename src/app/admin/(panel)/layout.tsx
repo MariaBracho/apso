@@ -36,7 +36,7 @@ export default async function LayoutPanel({
 
           <div className="flex min-w-0 items-center gap-3">
             <Link
-              href="/"
+              href="/componentes"
               className="text-cian hover:text-cian/80 shrink-0 text-xs transition-colors"
             >
               Ver tienda ↗
@@ -71,7 +71,7 @@ export default async function LayoutPanel({
             comprobar cómo quedó. Sin esto había que escribir la dirección a
             mano o abrir otra pestaña. */}
         <Link
-          href="/"
+          href="/componentes"
           className="text-cian hover:text-cian/80 mt-6 px-3.5 text-sm transition-colors"
         >
           Ir a la tienda ↗

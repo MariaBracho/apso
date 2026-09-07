@@ -11,6 +11,13 @@ export const WHATSAPP_ASESOR = "584246056110";
 /** El mismo número, como se lee en pantalla. */
 export const WHATSAPP_VISIBLE = "+58 424 605 6110";
 
+/** A dónde llega el aviso de cada pedido nuevo. */
+export const CORREO_PEDIDOS = "josephbrachovillanueva2@gmail.com";
+
+/** Para armar el enlace al pedido dentro del correo. */
+export const SITIO =
+  process.env.NEXT_PUBLIC_SITIO ?? "https://apso.store";
+
 /**
  * Quién atiende. Sale en la banda de asesoría del listado y en la tarjeta de
  * la ficha de producto.
