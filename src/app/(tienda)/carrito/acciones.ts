@@ -117,3 +117,20 @@ export async function quitarDelCarrito(itemId: string) {
 
   revalidatePath("/", "layout");
 }
+
+/**
+ * Vacía el carrito de quien llama.
+ *
+ * Se borran las líneas y no el carrito: la fila de `carritos` es a lo que
+ * apunta la cookie, y borrarla dejaría al navegador con una cookie apuntando a
+ * nada. Vacío y reutilizable es lo que se quiere.
+ */
+export async function vaciarCarrito() {
+  const carritoId = await obtenerCarritoActual();
+  if (!carritoId) return;
+
+  const supabase = crearClienteServicio();
+  await supabase.from("carrito_items").delete().eq("carrito_id", carritoId);
+
+  revalidatePath("/", "layout");
+}

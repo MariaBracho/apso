@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FilaCarrito } from "@/components/tienda/fila-carrito";
+import { VaciarCarrito } from "@/components/tienda/vaciar-carrito";
 import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
 import { formatearBs, formatearUsd } from "@/lib/formato";
@@ -22,12 +23,21 @@ export default async function PaginaCarrito() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <h1 className="font-display text-texto tracking-titular text-2xl font-semibold">
-        Tu carrito
-      </h1>
-      <p className="text-texto-2 mt-1 text-sm">
-        {resumen.unidades} {resumen.unidades === 1 ? "artículo" : "artículos"}
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-texto tracking-titular text-2xl font-semibold">
+            Tu carrito
+          </h1>
+          <p className="text-texto-2 mt-1 text-sm">
+            {resumen.unidades}{" "}
+            {resumen.unidades === 1 ? "artículo" : "artículos"}
+          </p>
+        </div>
+
+        <div className="shrink-0 pt-1.5">
+          <VaciarCarrito />
+        </div>
+      </div>
 
       {resumen.cambiosDePrecio.length > 0 && (
         <AvisoCambioDePrecio cambios={resumen.cambiosDePrecio} />

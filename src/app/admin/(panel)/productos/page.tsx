@@ -45,7 +45,10 @@ export default async function PaginaInventario() {
             <thead>
               <tr className="border-borde-sutil bg-superficie border-b">
                 <Th>Producto</Th>
-                <Th alineado="derecha">Precio</Th>
+                {/* Se nombra cuál de los dos: desde que hay precio en divisas
+                    y precio en bolívares, «Precio» a secas se lee como el de
+                    la tienda, que es el otro. */}
+                <Th alineado="derecha">En divisas</Th>
                 <Th alineado="derecha">Estado</Th>
                 <Th alineado="derecha">Stock</Th>
                 <Th alineado="centro">Visible</Th>

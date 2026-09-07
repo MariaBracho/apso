@@ -35,9 +35,12 @@ export default async function LayoutPanel({
           </Link>
 
           <div className="flex min-w-0 items-center gap-3">
-            <span className="text-texto-meta truncate text-xs">
-              {sesion.nombre}
-            </span>
+            <Link
+              href="/"
+              className="text-cian hover:text-cian/80 shrink-0 text-xs transition-colors"
+            >
+              Ver tienda ↗
+            </Link>
             <form action={salir}>
               <button
                 type="submit"
@@ -63,6 +66,16 @@ export default async function LayoutPanel({
         </Link>
 
         <NavPanel />
+
+        {/* Ver la tienda es parte del trabajo: se publica un producto y hay que
+            comprobar cómo quedó. Sin esto había que escribir la dirección a
+            mano o abrir otra pestaña. */}
+        <Link
+          href="/"
+          className="text-cian hover:text-cian/80 mt-6 px-3.5 text-sm transition-colors"
+        >
+          Ir a la tienda ↗
+        </Link>
 
         <div className="mt-auto pt-6">
           <p className="text-texto-2 truncate text-xs">{sesion.nombre}</p>
