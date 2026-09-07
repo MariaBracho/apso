@@ -1,5 +1,7 @@
 import * as yup from "yup";
 
+import { CONDICIONES } from "@/lib/producto";
+
 /**
  * Esquemas de validación, compartidos entre el formulario y el server action.
  *
@@ -132,10 +134,9 @@ export const esquemaProducto = yup.object({
     .positive("El plazo tiene que ser mayor que cero.")
     .defined(),
 
-  condicion: yup
-    .string()
-    .oneOf(["nuevo", "reacondicionado"] as const)
-    .required(),
+  // De la misma lista que el selector y el filtro: escrita aparte, agregar una
+  // condición dejaba el formulario rechazándola en silencio.
+  condicion: yup.string().oneOf(CONDICIONES).required(),
 
   garantia_vitalicia: yup.boolean().default(false),
   garantia_meses: yup

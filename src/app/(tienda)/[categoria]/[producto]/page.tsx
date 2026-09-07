@@ -18,6 +18,7 @@ import {
 import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
 import { calcularAhorro, formatearBs, formatearUsd } from "@/lib/formato";
 import { type Precios, preciosDe } from "@/lib/precio";
+import { NOMBRE_CONDICION } from "@/lib/producto";
 
 type Params = { categoria: string; producto: string };
 
@@ -200,7 +201,10 @@ function Especificaciones({ producto }: { producto: ProductoFicha }) {
         <div className="flex justify-between gap-6 py-2.5 text-sm">
           <dt className="text-texto-meta">Procedencia</dt>
           <dd className="text-texto-2 text-right">
-            {producto.condicion === "nuevo" ? "Nuevo" : "Reacondicionado"}, de{" "}
+            {/* Del mapa y no un ternario: con tres condiciones, «si no es
+                nuevo entonces reacondicionado» le miente al que compra uno
+                usado. */}
+            {NOMBRE_CONDICION[producto.condicion]}, de{" "}
             {producto.procedencia}
           </dd>
         </div>

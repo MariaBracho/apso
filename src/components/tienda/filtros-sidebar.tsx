@@ -28,12 +28,14 @@ export function FiltrosSidebar({
   disponibilidad,
   tipos,
   marcas,
+  condiciones,
   precioMinimo,
   precioMaximo,
 }: {
   disponibilidad: OpcionFiltro[];
   tipos: OpcionFiltro[];
   marcas: OpcionFiltro[];
+  condiciones: OpcionFiltro[];
   precioMinimo: number;
   precioMaximo: number;
 }) {
@@ -89,9 +91,16 @@ export function FiltrosSidebar({
   const marcado = (clave: string, valor: string) =>
     (params.get(clave) ?? "").split(",").includes(valor);
 
-  const hayFiltros = ["disponibilidad", "tipo", "marca", "min", "max"].some(
-    (clave) => params.has(clave),
-  );
+  const CLAVES = [
+    "disponibilidad",
+    "tipo",
+    "marca",
+    "condicion",
+    "min",
+    "max",
+  ];
+
+  const hayFiltros = CLAVES.some((clave) => params.has(clave));
 
   // En escritorio el sidebar va siempre desplegado. En móvil se pliega: si no,
   // los filtros empujan el primer producto una pantalla entera hacia abajo.
@@ -115,14 +124,11 @@ export function FiltrosSidebar({
           {hayFiltros && (
             <button
               type="button"
+              // Se borran las mismas claves que se comprueban arriba: escritas
+              // en dos listas, agregar un filtro y olvidar una deja «Limpiar»
+              // sin limpiarlo.
               onClick={() =>
-                actualizar({
-                  disponibilidad: null,
-                  tipo: null,
-                  marca: null,
-                  min: null,
-                  max: null,
-                })
+                actualizar(Object.fromEntries(CLAVES.map((c) => [c, null])))
               }
               className="text-cian hover:text-cian/80 text-xs transition-colors"
             >
@@ -159,6 +165,17 @@ export function FiltrosSidebar({
               opciones={tipos}
               marcado={(valor) => marcado("tipo", valor)}
               alAlternar={(valor) => alternar("tipo", valor)}
+            />
+          )}
+
+          {/* Solo sale si hay más de una: con todo el catálogo nuevo, un filtro
+              de una sola opción no filtra nada y ocupa sitio. */}
+          {condiciones.length > 1 && (
+            <GrupoCasillas
+              titulo="Condición"
+              opciones={condiciones}
+              marcado={(valor) => marcado("condicion", valor)}
+              alAlternar={(valor) => alternar("condicion", valor)}
             />
           )}
 

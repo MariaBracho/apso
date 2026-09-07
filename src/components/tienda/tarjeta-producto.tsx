@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { BadgeDisponibilidad } from "@/components/tienda/badge-disponibilidad";
 import { FotoProducto } from "@/components/tienda/foto-producto";
-import type { ProductoListado } from "@/lib/producto";
+import { NOMBRE_CONDICION, type ProductoListado } from "@/lib/producto";
 import { preciosDe } from "@/lib/precio";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 
@@ -45,11 +45,20 @@ export function TarjetaProducto({
       </div>
 
       <div className="mt-3 flex flex-1 flex-col">
-        {producto.marca && (
-          <span className="etiqueta text-texto-meta text-[10px]">
-            {producto.marca.nombre}
+        {/* La condición va junto a la marca y siempre, no solo cuando no es
+            nueva: la tienda promete procedencia clara, y que el dato aparezca
+            únicamente en lo reacondicionado obliga a deducir el resto. */}
+        <span className="etiqueta text-texto-meta flex flex-wrap gap-x-1.5 text-[10px]">
+          {producto.marca && <span>{producto.marca.nombre}</span>}
+          {producto.marca && <span aria-hidden="true">·</span>}
+          <span
+            className={
+              producto.condicion === "nuevo" ? undefined : "text-ambar"
+            }
+          >
+            {NOMBRE_CONDICION[producto.condicion]}
           </span>
-        )}
+        </span>
 
         <h3 className="text-texto group-hover:text-cian mt-1 text-sm leading-snug font-medium transition-colors">
           {producto.nombre}

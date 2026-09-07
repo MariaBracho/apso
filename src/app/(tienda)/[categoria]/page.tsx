@@ -20,6 +20,11 @@ import {
   obtenerRecargo,
 } from "@/lib/catalogo";
 import { aDivisa, preciosDe } from "@/lib/precio";
+import {
+  CONDICIONES,
+  type Condicion,
+  NOMBRE_CONDICION,
+} from "@/lib/producto";
 
 type Params = { categoria: string };
 type Busqueda = Record<string, string | string[] | undefined>;
@@ -91,6 +96,11 @@ export default async function PaginaCategoria({
     }))
     .filter((opcion) => opcion.total > 0);
   const opcionesMarca = contarMarcas(todos);
+  const opcionesCondicion: OpcionFiltro[] = CONDICIONES.map((c) => ({
+    valor: c,
+    etiqueta: NOMBRE_CONDICION[c],
+    total: todos.filter((p) => p.condicion === c).length,
+  })).filter((opcion) => opcion.total > 0);
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-8">
@@ -110,6 +120,7 @@ export default async function PaginaCategoria({
             disponibilidad={opcionesDisponibilidad}
             tipos={opcionesTipo}
             marcas={opcionesMarca}
+            condiciones={opcionesCondicion}
             precioMinimo={precioMinimo}
             precioMaximo={precioMaximo}
           />
@@ -188,6 +199,11 @@ function interpretarFiltros(crudos: Busqueda): FiltrosCatalogo {
     disponibilidad: lista("disponibilidad") as Disponibilidad[],
     marcas: lista("marca"),
     tipos: lista("tipo"),
+    // Se filtra contra los valores conocidos: la URL la escribe cualquiera, y
+    // un valor inventado haría fallar la consulta contra el enum de la base.
+    condiciones: lista("condicion").filter((c): c is Condicion =>
+      (CONDICIONES as string[]).includes(c),
+    ),
     precioMin: numero("min"),
     precioMax: numero("max"),
     orden:

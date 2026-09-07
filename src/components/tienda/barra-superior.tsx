@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/marca/isotipo";
 import { MenuCuenta } from "@/components/tienda/menu-cuenta";
+import { NavCategorias } from "@/components/tienda/nav-categorias";
 import type { Categoria } from "@/lib/catalogo";
 import { formatearTasa } from "@/lib/formato";
 
@@ -32,17 +33,7 @@ export function BarraSuperior({
           <Logo />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex">
-          {categorias.map((categoria) => (
-            <Link
-              key={categoria.id}
-              href={`/${categoria.slug}`}
-              className="text-texto-2 hover:text-texto hover:bg-superficie rounded-pildora px-3 py-1.5 text-sm transition-colors"
-            >
-              {categoria.nombre}
-            </Link>
-          ))}
-        </nav>
+        <NavCategorias categorias={categorias} variante="barra" />
 
         <form action="/componentes" className="ml-auto hidden md:block">
           <input
@@ -92,17 +83,7 @@ export function BarraSuperior({
           Laptops no hay forma. La tasa va aquí por lo mismo — es el dato que se
           mira antes que el precio y estaba invisible en móvil. */}
       <div className="border-borde-sutil flex items-center gap-2 border-t px-6 py-2 lg:hidden">
-        <nav className="flex flex-1 gap-2 overflow-x-auto">
-          {categorias.map((categoria) => (
-            <Link
-              key={categoria.id}
-              href={`/${categoria.slug}`}
-              className="bg-superficie-2 text-texto-2 hover:text-texto rounded-pildora shrink-0 px-3 py-1.5 text-xs transition-colors"
-            >
-              {categoria.nombre}
-            </Link>
-          ))}
-        </nav>
+        <NavCategorias categorias={categorias} variante="pildoras" />
 
         {tasa !== null && (
           <p className="text-texto-meta shrink-0 text-xs">

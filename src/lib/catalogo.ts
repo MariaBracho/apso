@@ -3,6 +3,7 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { disponibilidadDe } from "@/lib/producto";
 import type {
   Categoria,
+  Condicion,
   Disponibilidad,
   ProductoFicha,
   ProductoListado,
@@ -22,7 +23,7 @@ export * from "@/lib/producto";
 
 const CAMPOS_LISTADO = `
   id, slug, nombre, resumen, precio_usd, precio_referencia_usd,
-  stock, dias_encargo,
+  stock, dias_encargo, condicion,
   categoria:categorias!inner (slug, nombre),
   marca:marcas (slug, nombre),
   imagenes:producto_imagenes (url, alt)
@@ -171,6 +172,7 @@ export type FiltrosCatalogo = {
   disponibilidad?: Disponibilidad[];
   marcas?: string[];
   tipos?: string[];
+  condiciones?: Condicion[];
   precioMin?: number;
   precioMax?: number;
   orden?: "precio-asc" | "precio-desc" | "nuevos";
@@ -227,6 +229,9 @@ export async function obtenerProductos(
     const idsMarcas = (marcas ?? []).map((m) => m.id);
     if (idsMarcas.length === 0) return [];
     consulta = consulta.in("marca_id", idsMarcas);
+  }
+  if (filtros.condiciones && filtros.condiciones.length > 0) {
+    consulta = consulta.in("condicion", filtros.condiciones);
   }
 
   switch (filtros.orden) {

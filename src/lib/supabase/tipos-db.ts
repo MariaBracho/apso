@@ -826,7 +826,7 @@ export type Database = {
       tasa_vigente: { Args: never; Returns: number }
     }
     Enums: {
-      condicion_producto: "nuevo" | "reacondicionado"
+      condicion_producto: "nuevo" | "reacondicionado" | "usado"
       estado_pago: "en_espera" | "verificado" | "rechazado"
       estado_pedido:
         | "por_confirmar"
@@ -982,7 +982,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      condicion_producto: ["nuevo", "reacondicionado"],
+      condicion_producto: ["nuevo", "reacondicionado", "usado"],
       estado_pago: ["en_espera", "verificado", "rechazado"],
       estado_pedido: [
         "por_confirmar",

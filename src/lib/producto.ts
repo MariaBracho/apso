@@ -9,6 +9,28 @@
 
 export type Disponibilidad = "en_stock" | "por_pedido" | "sin_stock";
 
+/**
+ * En qué estado llega el equipo.
+ *
+ * «Reacondicionado» pasó por taller y se probó; «usado» se vende tal como
+ * llegó. Son cosas distintas y se pagan distinto, así que la tienda las nombra
+ * por separado en vez de meterlas en el mismo cajón.
+ */
+export type Condicion = "nuevo" | "reacondicionado" | "usado";
+
+export const NOMBRE_CONDICION: Record<Condicion, string> = {
+  nuevo: "Nuevo",
+  reacondicionado: "Reacondicionado",
+  usado: "Usado",
+};
+
+/** En el mismo orden que el enum de la base: de mejor a peor estado. */
+export const CONDICIONES: Condicion[] = [
+  "nuevo",
+  "reacondicionado",
+  "usado",
+];
+
 export type CategoriaRef = {
   slug: string;
   nombre: string;
@@ -82,6 +104,7 @@ export type ProductoListado = {
   precio_referencia_usd: number | null;
   stock: number;
   dias_encargo: number | null;
+  condicion: Condicion;
   categoria: CategoriaRef;
   marca: MarcaRef | null;
   /** En orden. La primera es la que sale en la tarjeta del catálogo. */

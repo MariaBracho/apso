@@ -16,6 +16,7 @@ import {
 } from "@/components/formulario/campos";
 import { type Foto, GestorFotos } from "@/components/admin/gestor-fotos";
 import { type DatosProducto, esquemaProducto } from "@/lib/esquemas";
+import { CONDICIONES, NOMBRE_CONDICION } from "@/lib/producto";
 import { generarSlug } from "@/lib/texto";
 
 export type OpcionSelect = { id: string; nombre: string };
@@ -304,9 +305,15 @@ export function FormularioProducto({
       <Seccion titulo="Procedencia y garantía">
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Condición">
+            {/* De la lista y no escritas a mano: así agregar una condición no
+                deja el panel sin poder elegirla, que es lo que acababa de
+                pasar con «usado». */}
             <select {...register("condicion")} className={estiloEntrada}>
-              <option value="nuevo">Nuevo</option>
-              <option value="reacondicionado">Reacondicionado</option>
+              {CONDICIONES.map((c) => (
+                <option key={c} value={c}>
+                  {NOMBRE_CONDICION[c]}
+                </option>
+              ))}
             </select>
           </Campo>
 
