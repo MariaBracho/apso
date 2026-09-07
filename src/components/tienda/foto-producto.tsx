@@ -27,18 +27,17 @@ export function FotoProducto({
       <div
         className={`bg-hueso ${alto} relative w-full overflow-hidden rounded-[10px]`}
       >
-        {/* `contain` y no `cover`: cubrir llena el marco y recorta lo que
-            sobra, y las fotos que manda un proveedor suelen traer el modelo y
-            las especificaciones escritos en los bordes. Recortar una foto de
-            producto esconde información de la compra; las bandas de fondo que
-            deja contener no molestan a nadie. */}
+        {/* `cover` llena el marco y recorta lo que sobra, para que la rejilla
+            del catálogo quede pareja. El precio es que una foto que no sea 4:3
+            pierde los bordes, así que el formulario de subida avisa de la
+            medida y comprueba la proporción antes de subir. */}
         <Image
           src={url}
           alt={alt ?? ""}
           fill
           sizes={tamanos}
           priority={prioridad}
-          className="object-contain"
+          className="object-cover"
         />
       </div>
     );

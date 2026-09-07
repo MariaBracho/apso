@@ -16,6 +16,37 @@ export const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 /** 5 MB, igual que `file_size_limit` del depósito. */
 export const MAXIMO = 5 * 1024 * 1024;
 
+/**
+ * La tienda muestra las fotos en 4:3 y recorta lo que sobra.
+ *
+ * La más grande se ve a 520 px de ancho, así que 1200 × 900 la cubre con
+ * margen en pantalla retina y es 4:3 exacto.
+ */
+export const ANCHO_SUGERIDO = 1200;
+export const ALTO_SUGERIDO = 900;
+export const PROPORCION = ANCHO_SUGERIDO / ALTO_SUGERIDO;
+
+/** El texto que se muestra en el formulario, para no repetirlo. */
+export const MEDIDA_SUGERIDA = `${ANCHO_SUGERIDO} × ${ALTO_SUGERIDO} px`;
+
+/**
+ * Avisa cuando la foto no es 4:3 y va a recortarse.
+ *
+ * Se avisa pero no se rechaza: puede que la foto valga la pena igual y el
+ * recorte no estorbe. Lo que no sirve es enterarse al ver la ficha publicada,
+ * que es lo que pasaba. El 4 % de tolerancia deja pasar medidas cercanas como
+ * 1024 × 768 sin molestar.
+ */
+export function avisoDeRecorte(ancho: number, alto: number): string | null {
+  if (!ancho || !alto) return null;
+
+  const proporcion = ancho / alto;
+  if (Math.abs(proporcion - PROPORCION) / PROPORCION <= 0.04) return null;
+
+  const lado = proporcion > PROPORCION ? "los lados" : "arriba y abajo";
+  return `Es ${ancho} × ${alto} y la tienda usa 4:3, así que se va a recortar por ${lado}. La medida ideal es ${MEDIDA_SUGERIDA}.`;
+}
+
 export function motivoRechazo(archivo: File): string | null {
   if (archivo.size === 0) return "El archivo está vacío.";
   if (!TIPOS.includes(archivo.type)) {

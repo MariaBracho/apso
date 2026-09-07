@@ -9,7 +9,12 @@ import {
   moverFoto,
   registrarFoto,
 } from "@/app/admin/(panel)/productos/fotos";
-import { DEPOSITO, motivoRechazo } from "@/lib/fotos";
+import {
+  DEPOSITO,
+  MEDIDA_SUGERIDA,
+  avisoDeRecorte,
+  motivoRechazo,
+} from "@/lib/fotos";
 import { crearClienteNavegador } from "@/lib/supabase/navegador";
 import { generarSlug } from "@/lib/texto";
 
@@ -50,6 +55,16 @@ export function GestorFotos({
         if (rechazo) {
           toast.error(`${archivo.name}: ${rechazo}`);
           continue;
+        }
+
+        // Se mide antes de subir. La foto igual se sube —puede que el recorte
+        // no estorbe— pero enterarse aquí y no al ver la ficha publicada es la
+        // diferencia entre corregirlo en un minuto y descubrirlo por un
+        // cliente.
+        const medidas = await medirImagen(archivo);
+        const aviso = medidas && avisoDeRecorte(medidas.ancho, medidas.alto);
+        if (aviso) {
+          toast.warning(archivo.name, { description: aviso, duration: 8000 });
         }
 
         // Nombre legible, con sufijo para no pisar otra foto del mismo
@@ -94,13 +109,15 @@ export function GestorFotos({
         <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
           {fotos.map((foto, i) => (
             <li key={foto.id} className="group relative">
-              <div className="bg-hueso rounded-tarjeta relative aspect-square overflow-hidden">
+              {/* 4:3 y `cover`, igual que la tienda: si aquí se viera la foto
+                  entera, el recorte sería una sorpresa al publicar. */}
+              <div className="bg-hueso rounded-tarjeta relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={foto.url}
                   alt=""
                   fill
                   sizes="160px"
-                  className="object-contain"
+                  className="object-cover"
                 />
               </div>
 
@@ -162,13 +179,49 @@ export function GestorFotos({
           className="text-texto-2 file:bg-superficie-3 file:text-texto file:rounded-pildora hover:file:bg-superficie-alta w-full text-sm file:mr-3 file:cursor-pointer file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold"
         />
         <p className="text-texto-meta mt-2 text-xs leading-relaxed">
-          {subiendo > 0
-            ? `Subiendo ${subiendo}…`
-            : "JPG, PNG, WebP o AVIF, hasta 5 MB cada una. La primera es la que se ve en el catálogo."}
+          {subiendo > 0 ? (
+            `Subiendo ${subiendo}…`
+          ) : (
+            <>
+              <span className="text-texto-2">{MEDIDA_SUGERIDA}</span> o
+              cualquier medida en proporción 4:3. La tienda recorta lo que se
+              salga de esa proporción, así que deja el producto centrado y no
+              pongas texto pegado a los bordes.
+              <br />
+              JPG, PNG, WebP o AVIF, hasta 5 MB. La primera es la que se ve en
+              el catálogo.
+            </>
+          )}
         </p>
       </div>
     </div>
   );
+}
+
+/**
+ * Ancho y alto reales del archivo.
+ *
+ * Se libera el object URL pase lo que pase: sin eso cada foto que se
+ * previsualiza deja el archivo entero retenido en memoria.
+ */
+function medirImagen(
+  archivo: File,
+): Promise<{ ancho: number; alto: number } | null> {
+  return new Promise((resolver) => {
+    const url = URL.createObjectURL(archivo);
+    const imagen = new window.Image();
+
+    imagen.onload = () => {
+      URL.revokeObjectURL(url);
+      resolver({ ancho: imagen.naturalWidth, alto: imagen.naturalHeight });
+    };
+    imagen.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolver(null);
+    };
+
+    imagen.src = url;
+  });
 }
 
 function BotonOrden({
