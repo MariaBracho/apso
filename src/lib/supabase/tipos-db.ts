@@ -34,35 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      ajustes: {
-        Row: {
-          actualizado_en: string
-          actualizado_por: string | null
-          id: boolean
-          margen_tasa_pct: number
-        }
-        Insert: {
-          actualizado_en?: string
-          actualizado_por?: string | null
-          id?: boolean
-          margen_tasa_pct?: number
-        }
-        Update: {
-          actualizado_en?: string
-          actualizado_por?: string | null
-          id?: boolean
-          margen_tasa_pct?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ajustes_actualizado_por_fkey"
-            columns: ["actualizado_por"]
-            isOneToOne: false
-            referencedRelation: "perfiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       busquedas: {
         Row: {
           creado_en: string
@@ -755,7 +726,6 @@ export type Database = {
     Functions: {
       es_admin: { Args: never; Returns: boolean }
       reclamar_pedidos_por_whatsapp: { Args: never; Returns: number }
-      tasa_de_venta: { Args: never; Returns: number }
       tasa_vigente: { Args: never; Returns: number }
     }
     Enums: {
