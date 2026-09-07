@@ -7,8 +7,11 @@ import { toast } from "sonner";
 import {
   borrarFoto,
   moverFoto,
-  subirFoto,
+  registrarFoto,
 } from "@/app/admin/(panel)/productos/fotos";
+import { DEPOSITO, motivoRechazo } from "@/lib/fotos";
+import { crearClienteNavegador } from "@/lib/supabase/navegador";
+import { generarSlug } from "@/lib/texto";
 
 export type Foto = { id: string; url: string; orden: number };
 
@@ -38,15 +41,38 @@ export function GestorFotos({
 
     iniciar(async () => {
       let bien = 0;
+      const supabase = crearClienteNavegador();
 
       // De una en una y en orden, para que el orden final sea el que eligió
       // al seleccionarlas.
       for (const archivo of lista) {
-        const datos = new FormData();
-        datos.set("producto_id", productoId);
-        datos.set("archivo", archivo);
+        const rechazo = motivoRechazo(archivo);
+        if (rechazo) {
+          toast.error(`${archivo.name}: ${rechazo}`);
+          continue;
+        }
 
-        const resultado = await subirFoto(datos);
+        // Nombre legible, con sufijo para no pisar otra foto del mismo
+        // producto. La carpeta es el id del producto, y el servidor comprueba
+        // que la ruta que le pasamos cuelgue de ahí.
+        const extension = archivo.name.split(".").pop()?.toLowerCase() ?? "jpg";
+        const base = generarSlug(archivo.name.replace(/\.[^.]+$/, "")) || "foto";
+        const ruta = `${productoId}/${base}-${crypto.randomUUID().slice(0, 8)}.${extension}`;
+
+        // El archivo va del navegador al depósito sin pasar por Next: así no
+        // topa con el límite de 1 MB del server action ni con el de la función
+        // en Vercel. Quien sube tiene que ser admin, y eso lo exige la política
+        // del depósito contra su sesión.
+        const { error } = await supabase.storage
+          .from(DEPOSITO)
+          .upload(ruta, archivo, { contentType: archivo.type, upsert: false });
+
+        if (error) {
+          toast.error(`${archivo.name}: no se pudo subir. ${error.message}`);
+          continue;
+        }
+
+        const resultado = await registrarFoto(productoId, ruta);
         if (resultado && "error" in resultado) {
           toast.error(`${archivo.name}: ${resultado.error}`);
         } else {

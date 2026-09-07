@@ -2,58 +2,37 @@
 
 import { revalidatePath } from "next/cache";
 
+import { DEPOSITO } from "@/lib/fotos";
 import { exigirAdmin } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
-import { generarSlug } from "@/lib/texto";
 
 export type EstadoFoto = { error: string } | { ok: true; url: string } | undefined;
 
-const DEPOSITO = "productos";
-const TIPOS = ["image/jpeg", "image/png", "image/webp", "image/avif"];
-const MAXIMO = 5 * 1024 * 1024;
-
 /**
- * Sube una foto de producto.
+ * Registra una foto ya subida.
  *
- * El archivo viaja como FormData porque un File no se puede serializar como
- * argumento normal de server action.
+ * El archivo NO pasa por aquí. Un server action tiene el cuerpo limitado a
+ * 1 MB por Next, y en Vercel la función entera topa en 4,5 MB: cualquier foto
+ * de cámara revienta las dos cosas antes de que corra una sola línea de este
+ * archivo, y lo que se ve es una pantalla de error del framework, no un
+ * mensaje. Por eso el navegador sube directo a Storage —donde el depósito
+ * impone sus propios límites de tamaño y tipo— y aquí solo llega la ruta.
  *
- * Se valida aquí además de en el navegador: el límite del depósito y estas
- * comprobaciones son las que mandan, la del formulario solo evita el viaje.
+ * La ruta viene del cliente, así que se comprueba que cuelgue de este producto:
+ * sin eso se podría registrar cualquier objeto del depósito bajo cualquier
+ * ficha.
  */
-export async function subirFoto(datos: FormData): Promise<EstadoFoto> {
+export async function registrarFoto(
+  productoId: string,
+  ruta: string,
+): Promise<EstadoFoto> {
   await exigirAdmin();
 
-  const productoId = String(datos.get("producto_id") ?? "");
-  const archivo = datos.get("archivo");
-
-  if (!(archivo instanceof File) || archivo.size === 0) {
-    return { error: "No llegó ninguna imagen." };
-  }
-  if (!TIPOS.includes(archivo.type)) {
-    return { error: "Solo se aceptan imágenes JPG, PNG, WebP o AVIF." };
-  }
-  if (archivo.size > MAXIMO) {
-    return {
-      error: `La imagen pesa ${(archivo.size / 1048576).toFixed(1)} MB y el máximo son 5 MB. Compárte­la más o redúcela.`,
-    };
+  if (!ruta.startsWith(`${productoId}/`) || ruta.includes("..")) {
+    return { error: "Esa ruta no corresponde a este producto." };
   }
 
   const supabase = await crearClienteServidor();
-
-  // Nombre estable y legible, con sufijo para no pisar una foto existente del
-  // mismo producto.
-  const extension = archivo.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const base = generarSlug(archivo.name.replace(/\.[^.]+$/, "")) || "foto";
-  const ruta = `${productoId}/${base}-${crypto.randomUUID().slice(0, 8)}.${extension}`;
-
-  const { error: errorSubida } = await supabase.storage
-    .from(DEPOSITO)
-    .upload(ruta, archivo, { contentType: archivo.type, upsert: false });
-
-  if (errorSubida) {
-    return { error: `No se pudo subir: ${errorSubida.message}` };
-  }
 
   const {
     data: { publicUrl },
