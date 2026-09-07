@@ -11,10 +11,12 @@ import {
   obtenerCategoriaPorId,
   obtenerCategoriaPorSlug,
   obtenerProductoPorSlug,
+  obtenerRecargo,
   obtenerTasaVigente,
 } from "@/lib/catalogo";
 import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
 import { calcularAhorro, formatearBs, formatearUsd } from "@/lib/formato";
+import { type Precios, preciosDe } from "@/lib/precio";
 
 type Params = { categoria: string; producto: string };
 
@@ -44,9 +46,10 @@ export default async function PaginaProducto({
   const producto = await obtenerProductoPorSlug(slugProducto);
   if (!producto) notFound();
 
-  const [categoria, tasa] = await Promise.all([
+  const [categoria, tasa, recargo] = await Promise.all([
     obtenerCategoriaPorSlug(producto.categoria.slug),
     obtenerTasaVigente(),
+    obtenerRecargo(),
   ]);
 
   const padre = categoria?.padre_id
@@ -63,7 +66,7 @@ export default async function PaginaProducto({
         {/* La columna de decisión se queda fija: precio, ahorro y con quién
             hablar siguen a la vista mientras se leen las especificaciones. */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <PanelCompra producto={producto} tasa={tasa} />
+          <PanelCompra producto={producto} tasa={tasa} recargo={recargo} />
         </div>
       </div>
     </div>
@@ -194,12 +197,15 @@ function textoGarantia(producto: ProductoFicha): string {
 function PanelCompra({
   producto,
   tasa,
+  recargo,
 }: {
   producto: ProductoFicha;
   tasa: number | null;
+  recargo: number;
 }) {
+  const precios = preciosDe(producto.precio_usd, recargo);
   const ahorro = calcularAhorro(
-    producto.precio_usd,
+    precios.bolivares,
     producto.precio_referencia_usd,
   );
 
@@ -221,21 +227,27 @@ function PanelCompra({
         )}
       </div>
 
+      {/* El precio grande es el de pagar en bolívares: es el caso común y es
+          el que, multiplicado por la tasa oficial, da el monto de abajo. Que
+          esa cuenta se pueda hacer de cabeza es lo que hace creíble el
+          número. */}
       <div>
         <p className="font-display text-ambar tracking-display text-4xl font-semibold">
-          {formatearUsd(producto.precio_usd)}
+          {formatearUsd(precios.bolivares)}
         </p>
         {tasa !== null && (
           <p className="text-texto-meta mt-1 text-sm">
-            {formatearBs(producto.precio_usd, tasa)} a la tasa de hoy
+            {formatearBs(precios.bolivares, tasa)} a la tasa del BCV
           </p>
         )}
       </div>
 
+      {precios.ahorro > 0 && <BloqueDivisas precios={precios} />}
+
       {ahorro && (
         <BloqueAhorro
           precioReferencia={producto.precio_referencia_usd!}
-          precio={producto.precio_usd}
+          precio={precios.bolivares}
           ahorro={ahorro.monto}
         />
       )}
@@ -243,12 +255,43 @@ function PanelCompra({
       <CompraProducto
         productoId={producto.id}
         nombre={producto.nombre}
-        precioUsd={producto.precio_usd}
+        precioUsd={precios.bolivares}
         stock={producto.stock}
         tasa={tasa}
       />
 
       <TarjetaAsesor nombreProducto={producto.nombre} />
+    </div>
+  );
+}
+
+/**
+ * Precio pagando en dólares.
+ *
+ * No es un descuento inventado: la diferencia es exactamente el recargo que
+ * lleva el precio en bolívares, y se dice de dónde sale. Pagar en divisas le
+ * ahorra a la tienda tener que reponer inventario comprando dólares por encima
+ * de la tasa oficial, y ese ahorro se traslada.
+ */
+function BloqueDivisas({ precios }: { precios: Precios }) {
+  return (
+    <div className="border-exito/30 rounded-tarjeta border p-4">
+      <div className="flex items-baseline justify-between">
+        <span className="text-texto text-sm font-medium">
+          Pagando en dólares
+        </span>
+        <span className="font-display text-exito text-xl font-semibold">
+          {formatearUsd(precios.divisa)}
+        </span>
+      </div>
+
+      <p className="text-exito mt-1 text-sm">
+        Ahorras {formatearUsd(precios.ahorro)}
+      </p>
+      <p className="text-texto-meta mt-2 text-xs leading-relaxed">
+        En efectivo, Zelle, Binance o tarjeta. El precio de arriba es pagando en
+        bolívares.
+      </p>
     </div>
   );
 }

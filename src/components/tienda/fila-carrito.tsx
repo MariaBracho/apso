@@ -12,18 +12,23 @@ import { BadgeDisponibilidad } from "@/components/tienda/badge-disponibilidad";
 import { FotoProducto } from "@/components/tienda/foto-producto";
 import type { ItemCarrito } from "@/lib/carrito";
 import { formatearBs, formatearUsd } from "@/lib/formato";
+import { preciosDe } from "@/lib/precio";
 
 export function FilaCarrito({
   item,
   tasa,
+  recargo,
 }: {
   item: ItemCarrito;
   tasa: number | null;
+  recargo: number;
 }) {
   const [pendiente, iniciar] = useTransition();
 
   const producto = item.producto;
-  const total = producto.precio_usd * item.cantidad;
+  // El de pagar en bolívares, igual que en el catálogo y la ficha. El de
+  // divisas se ofrece en el resumen del pedido, cuando ya se eligió cómo pagar.
+  const total = preciosDe(producto.precio_usd, recargo).bolivares * item.cantidad;
   // Sin stock no se bloquea el carrito: se puede pedir por encargo. El tope
   // solo aplica a lo que hay en existencia.
   const tope = producto.stock > 0 ? producto.stock : item.cantidad;

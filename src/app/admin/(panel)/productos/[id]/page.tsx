@@ -10,6 +10,7 @@ import {
   listarMarcas,
   obtenerProductoAdmin,
 } from "@/lib/admin";
+import { obtenerRecargo } from "@/lib/catalogo";
 
 export const metadata: Metadata = { title: "Editar producto" };
 
@@ -20,11 +21,12 @@ export default async function PaginaEditarProducto({
 }) {
   const { id } = await params;
 
-  const [producto, categorias, marcas, fotos] = await Promise.all([
+  const [producto, categorias, marcas, fotos, recargo] = await Promise.all([
     obtenerProductoAdmin(id),
     listarCategorias(),
     listarMarcas(),
     listarFotos(id),
+    obtenerRecargo(),
   ]);
 
   if (!producto) notFound();
@@ -78,6 +80,7 @@ export default async function PaginaEditarProducto({
         etiquetaEnvio="Guardar cambios"
         productoId={id}
         fotos={fotos}
+        recargo={recargo}
       />
     </div>
   );

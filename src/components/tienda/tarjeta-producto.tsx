@@ -3,26 +3,30 @@ import Link from "next/link";
 import { BadgeDisponibilidad } from "@/components/tienda/badge-disponibilidad";
 import { FotoProducto } from "@/components/tienda/foto-producto";
 import type { ProductoListado } from "@/lib/producto";
-import { calcularAhorro, formatearBs, formatearUsd } from "@/lib/formato";
+import { preciosDe } from "@/lib/precio";
+import { formatearBs, formatearUsd } from "@/lib/formato";
 
 /**
  * Tarjeta del listado.
  *
  * Jerarquía del handoff: el precio en dólares manda (ámbar, Sora), y debajo,
- * en gris pequeño, el precio en bolívares y el ahorro. El bolívar es lo que
- * el cliente venezolano necesita para decidir; el dólar es el precio real.
+ * en gris pequeño, el precio en bolívares. El bolívar es lo que el cliente
+ * venezolano necesita para decidir; el dólar es el precio real.
+ *
+ * El grande es el de pagar en bolívares porque es el caso común, y es el que
+ * multiplicado por la tasa da el monto en bolívares de al lado. El de divisas
+ * va debajo como lo que es: más barato por pagar en dólares.
  */
 export function TarjetaProducto({
   producto,
   tasa,
+  recargo,
 }: {
   producto: ProductoListado;
   tasa: number | null;
+  recargo: number;
 }) {
-  const ahorro = calcularAhorro(
-    producto.precio_usd,
-    producto.precio_referencia_usd,
-  );
+  const precios = preciosDe(producto.precio_usd, recargo);
 
   return (
     <Link
@@ -53,14 +57,18 @@ export function TarjetaProducto({
 
         <div className="mt-auto pt-3">
           <p className="font-display text-ambar tracking-titular text-xl font-semibold">
-            {formatearUsd(producto.precio_usd)}
+            {formatearUsd(precios.bolivares)}
           </p>
           <p className="text-texto-meta mt-0.5 text-xs">
             {tasa !== null
-              ? formatearBs(producto.precio_usd, tasa)
+              ? formatearBs(precios.bolivares, tasa)
               : "Tasa no disponible"}
-            {ahorro && ` · ahorras ${formatearUsd(ahorro.monto)}`}
           </p>
+          {precios.ahorro > 0 && (
+            <p className="text-exito mt-1 text-xs">
+              {formatearUsd(precios.divisa)} en divisas
+            </p>
+          )}
         </div>
       </div>
     </Link>

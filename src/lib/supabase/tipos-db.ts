@@ -34,6 +34,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ajustes: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          id: boolean
+          recargo_bs_pct: number
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          id?: boolean
+          recargo_bs_pct?: number
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          id?: boolean
+          recargo_bs_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajustes_actualizado_por_fkey"
+            columns: ["actualizado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       busquedas: {
         Row: {
           creado_en: string

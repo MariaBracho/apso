@@ -198,6 +198,20 @@ export const esquemaTasa = yup.object({
 
 export type DatosTasa = yup.InferType<typeof esquemaTasa>;
 
+export const esquemaRecargo = yup.object({
+  recargo_bs_pct: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El recargo tiene que ser un número.")
+    .required("Escribe el recargo.")
+    .min(0, "El recargo no puede ser negativo.")
+    // El tope está también en la base. Tres dígitos casi siempre es un cero de
+    // más, y esto se paga en lo que cobra el cliente.
+    .max(100, "Un recargo de más de 100 % no parece intencional. Revísalo."),
+});
+
+export type DatosRecargo = yup.InferType<typeof esquemaRecargo>;
+
 
 // ---------------------------------------------------------------------------
 // Perfil del cliente

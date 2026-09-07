@@ -59,6 +59,25 @@ function avisarFallo(donde: string, error: { message: string } | null) {
  * Todo bolívar que se muestra sale de aquí — barra, tarjeta, ficha, carrito,
  * checkout y el pedido que se guarda.
  */
+/**
+ * El recargo por pagar en bolívares, en porcentaje.
+ *
+ * Devuelve 0 si no se puede leer: sin recargo la tienda cobra de menos, que es
+ * un problema de la tienda. Suponer que hay recargo cuando no se sabe cobraría
+ * de más, que es un problema del cliente.
+ */
+export async function obtenerRecargo(): Promise<number> {
+  const supabase = await crearClienteServidor();
+
+  const { data, error } = await supabase
+    .from("ajustes")
+    .select("recargo_bs_pct")
+    .maybeSingle();
+
+  avisarFallo("recargo en bolívares", error);
+  return Number(data?.recargo_bs_pct ?? 0);
+}
+
 export async function obtenerTasaVigente(): Promise<number | null> {
   const supabase = await crearClienteServidor();
 

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-import { FormularioTasa } from "@/app/admin/(panel)/tasa/formulario";
+import {
+  FormularioRecargo,
+  FormularioTasa,
+} from "@/app/admin/(panel)/tasa/formulario";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { formatearTasa } from "@/lib/formato";
 
@@ -15,14 +18,18 @@ const NOMBRE_FUENTE: Record<string, string> = {
 export default async function PaginaTasa() {
   const supabase = await crearClienteServidor();
 
-  const { data: historial } = await supabase
-    .from("tasas_cambio")
-    .select("id, valor, fuente, vigente_desde")
-    .order("vigente_desde", { ascending: false })
-    .limit(15);
+  const [{ data: historial }, { data: ajustes }] = await Promise.all([
+    supabase
+      .from("tasas_cambio")
+      .select("id, valor, fuente, vigente_desde")
+      .order("vigente_desde", { ascending: false })
+      .limit(15),
+    supabase.from("ajustes").select("recargo_bs_pct").maybeSingle(),
+  ]);
 
   const tasas = historial ?? [];
   const vigente = tasas[0];
+  const recargo = Number(ajustes?.recargo_bs_pct ?? 0);
 
   return (
     <div className="mx-auto max-w-2xl px-8 py-10">
@@ -48,7 +55,10 @@ export default async function PaginaTasa() {
         )}
       </div>
 
-      <FormularioTasa />
+      <div className="space-y-10">
+        <FormularioTasa />
+        <FormularioRecargo recargo={recargo} />
+      </div>
 
       {tasas.length > 1 && (
         <section className="mt-10">

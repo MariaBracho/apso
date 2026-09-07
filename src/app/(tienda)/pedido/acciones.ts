@@ -7,7 +7,8 @@ import {
   leerCarrito,
   obtenerCarritoActual,
 } from "@/lib/carrito";
-import { obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
+import { preciosDe, precioSegunPago } from "@/lib/precio";
 import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
 import { COOKIE_PEDIDO } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
@@ -52,10 +53,18 @@ export async function enviarPedido(
     };
   }
 
+  // El precio depende de cómo vaya a pagar: en divisas rige el que se carga en
+  // el panel, y en bolívares ese mismo más el recargo. Se decide aquí y no en
+  // el navegador porque es lo que se le va a cobrar.
+  const recargo = await obtenerRecargo();
+
   // Se lee del producto, no del carrito: el carrito guarda el precio de cuando
   // se agregó y el que vale es el de ahora, que es el que se le mostró.
+  const precioDe = (precioDivisa: number) =>
+    precioSegunPago(preciosDe(precioDivisa, recargo), pedido.metodo_pago);
+
   const subtotalUsd = items.reduce(
-    (total, item) => total + item.producto.precio_usd * item.cantidad,
+    (total, item) => total + precioDe(item.producto.precio_usd) * item.cantidad,
     0,
   );
 
@@ -106,7 +115,9 @@ export async function enviarPedido(
       producto_id: item.producto.id,
       nombre_producto: item.producto.nombre,
       cantidad: item.cantidad,
-      precio_usd_unitario: item.producto.precio_usd,
+      // El mismo precio que se sumó al subtotal, o las líneas no cuadrarían
+      // con el total del pedido.
+      precio_usd_unitario: precioDe(item.producto.precio_usd),
     })),
   );
 

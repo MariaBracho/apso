@@ -17,7 +17,9 @@ import {
   obtenerProductos,
   obtenerSubcategorias,
   obtenerTasaVigente,
+  obtenerRecargo,
 } from "@/lib/catalogo";
+import { aDivisa, preciosDe } from "@/lib/precio";
 
 type Params = { categoria: string };
 type Busqueda = Record<string, string | string[] | undefined>;
@@ -48,17 +50,35 @@ export default async function PaginaCategoria({
   const filtrosCrudos = await searchParams;
   const filtros = interpretarFiltros(filtrosCrudos);
 
+  const recargo = await obtenerRecargo();
+
+  // El slider habla en los precios que se ven en las tarjetas —los de pagar en
+  // bolívares— pero la base guarda los de divisas, así que lo que elige el
+  // cliente se traduce antes de consultar. Si no, el filtro de «hasta $100»
+  // dejaría fuera productos que la tarjeta muestra en $95.
+  const filtrosBase = {
+    ...filtros,
+    precioMin:
+      filtros.precioMin === undefined
+        ? undefined
+        : aDivisa(filtros.precioMin, recargo),
+    precioMax:
+      filtros.precioMax === undefined
+        ? undefined
+        : aDivisa(filtros.precioMax, recargo),
+  };
+
   // El listado sin filtrar sirve para dos cosas: los conteos del sidebar y los
   // topes del slider. Los conteos muestran lo que hay en la categoría, no lo
   // que queda después de filtrar — si no, marcar un filtro vaciaría el resto.
   const [todos, productos, subcategorias, tasa] = await Promise.all([
     obtenerProductos(categoria),
-    obtenerProductos(categoria, filtros),
+    obtenerProductos(categoria, filtrosBase),
     obtenerSubcategorias(categoria.id),
     obtenerTasaVigente(),
   ]);
 
-  const precios = todos.map((p) => p.precio_usd);
+  const precios = todos.map((p) => preciosDe(p.precio_usd, recargo).bolivares);
   const precioMinimo = precios.length ? Math.floor(Math.min(...precios)) : 0;
   const precioMaximo = precios.length ? Math.ceil(Math.max(...precios)) : 0;
 
@@ -114,6 +134,7 @@ export default async function PaginaCategoria({
                   key={producto.id}
                   producto={producto}
                   tasa={tasa}
+                  recargo={recargo}
                 />
               ))}
             </div>

@@ -2,15 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FilaCarrito } from "@/components/tienda/fila-carrito";
-import { obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
 import { formatearBs, formatearUsd } from "@/lib/formato";
+import { preciosDe } from "@/lib/precio";
 
 export const metadata: Metadata = { title: "Tu carrito" };
 
 export default async function PaginaCarrito() {
-  const [items, tasa] = await Promise.all([leerCarrito(), obtenerTasaVigente()]);
+  const [items, tasa, recargo] = await Promise.all([
+    leerCarrito(),
+    obtenerTasaVigente(),
+    obtenerRecargo(),
+  ]);
   const resumen = resumir(items);
+  const total = preciosDe(resumen.subtotalUsd, recargo);
 
   if (items.length === 0) return <CarritoVacio />;
 
@@ -29,12 +35,17 @@ export default async function PaginaCarrito() {
 
       <ul className="mt-8 space-y-3">
         {items.map((item) => (
-          <FilaCarrito key={item.id} item={item} tasa={tasa} />
+          <FilaCarrito
+            key={item.id}
+            item={item}
+            tasa={tasa}
+            recargo={recargo}
+          />
         ))}
       </ul>
 
       <div className="bg-superficie rounded-panel mt-8 p-6">
-        <Linea etiqueta="Subtotal" valor={formatearUsd(resumen.subtotalUsd)} />
+        <Linea etiqueta="Subtotal" valor={formatearUsd(total.bolivares)} />
         <Linea
           etiqueta="Entrega"
           valor="Se acuerda en el chat"
@@ -42,25 +53,39 @@ export default async function PaginaCarrito() {
         />
         {tasa !== null && (
           <Linea
-            etiqueta="Tasa aplicada"
+            etiqueta="Tasa del BCV"
             valor={`Bs ${tasa.toLocaleString("es-VE", { minimumFractionDigits: 2 })} / $`}
             apagado
           />
         )}
 
         <div className="border-borde mt-4 flex items-baseline justify-between border-t pt-4">
-          <span className="text-texto text-sm font-medium">Total</span>
+          <span className="text-texto text-sm font-medium">
+            Pagando en bolívares
+          </span>
           <div className="text-right">
             <p className="font-display text-ambar tracking-titular text-2xl font-semibold">
-              {formatearUsd(resumen.subtotalUsd)}
+              {formatearUsd(total.bolivares)}
             </p>
             {tasa !== null && (
               <p className="text-texto-meta text-xs">
-                {formatearBs(resumen.subtotalUsd, tasa)}
+                {formatearBs(total.bolivares, tasa)}
               </p>
             )}
           </div>
         </div>
+
+        {total.ahorro > 0 && (
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-texto-2 text-sm">
+              Pagando en dólares
+              <span className="text-texto-meta"> · ahorras {formatearUsd(total.ahorro)}</span>
+            </span>
+            <p className="font-display text-exito text-lg font-semibold">
+              {formatearUsd(total.divisa)}
+            </p>
+          </div>
+        )}
 
         <Link
           href="/pedido"

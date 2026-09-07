@@ -2,23 +2,26 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { FormularioPedido } from "@/app/(tienda)/pedido/formulario";
-import { obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
 import { obtenerSesion } from "@/lib/sesion";
 import { formatearBs, formatearUsd } from "@/lib/formato";
+import { preciosDe } from "@/lib/precio";
 
 export const metadata: Metadata = { title: "Tu pedido" };
 
 export default async function PaginaPedido() {
-  const [items, tasa, sesion] = await Promise.all([
+  const [items, tasa, sesion, recargo] = await Promise.all([
     leerCarrito(),
     obtenerTasaVigente(),
     obtenerSesion(),
+    obtenerRecargo(),
   ]);
 
   if (items.length === 0) redirect("/carrito");
 
   const resumen = resumir(items);
+  const total = preciosDe(resumen.subtotalUsd, recargo);
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
@@ -49,25 +52,42 @@ export default async function PaginaPedido() {
                     {item.producto.nombre}
                   </span>
                   <span className="text-texto shrink-0">
-                    {formatearUsd(item.producto.precio_usd * item.cantidad)}
+                    {formatearUsd(
+                      preciosDe(item.producto.precio_usd, recargo).bolivares *
+                        item.cantidad,
+                    )}
                   </span>
                 </li>
               ))}
             </ul>
 
+            {/* Se muestran los dos totales en vez de uno que cambie al elegir
+                método: cuál se cobra depende de cómo pague, y verlo antes de
+                decidir es justo el momento en que sirve saberlo. */}
             <div className="border-borde mt-4 flex items-baseline justify-between border-t pt-4">
-              <span className="text-texto text-sm font-medium">Total</span>
+              <span className="text-texto text-sm font-medium">
+                Pagando en bolívares
+              </span>
               <div className="text-right">
                 <p className="font-display text-ambar text-xl font-semibold">
-                  {formatearUsd(resumen.subtotalUsd)}
+                  {formatearUsd(total.bolivares)}
                 </p>
                 {tasa !== null && (
                   <p className="text-texto-meta text-xs">
-                    {formatearBs(resumen.subtotalUsd, tasa)}
+                    {formatearBs(total.bolivares, tasa)}
                   </p>
                 )}
               </div>
             </div>
+
+            {total.ahorro > 0 && (
+              <div className="mt-3 flex items-baseline justify-between">
+                <span className="text-texto-2 text-sm">Pagando en dólares</span>
+                <p className="font-display text-exito text-lg font-semibold">
+                  {formatearUsd(total.divisa)}
+                </p>
+              </div>
+            )}
 
             <p className="text-texto-meta mt-3 text-xs leading-relaxed">
               El precio queda fijo en dólares desde que confirmas. Si eliges

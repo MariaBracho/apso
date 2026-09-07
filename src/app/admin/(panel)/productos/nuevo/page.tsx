@@ -6,13 +6,15 @@ import {
   PRODUCTO_VACIO,
 } from "@/components/admin/formulario-producto";
 import { listarCategorias, listarMarcas } from "@/lib/admin";
+import { obtenerRecargo } from "@/lib/catalogo";
 
 export const metadata: Metadata = { title: "Agregar producto" };
 
 export default async function PaginaNuevoProducto() {
-  const [categorias, marcas] = await Promise.all([
+  const [categorias, marcas, recargo] = await Promise.all([
     listarCategorias(),
     listarMarcas(),
+    obtenerRecargo(),
   ]);
 
   return (
@@ -27,6 +29,7 @@ export default async function PaginaNuevoProducto() {
         categorias={categorias}
         marcas={marcas}
         etiquetaEnvio="Publicar producto"
+        recargo={recargo}
       />
     </div>
   );

@@ -3,6 +3,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import Link from "next/link";
 import { useState } from "react";
+import type { Control } from "react-hook-form";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 
 import type { EstadoProducto } from "@/app/admin/(panel)/productos/acciones";
@@ -46,6 +47,7 @@ export function FormularioProducto({
   etiquetaEnvio,
   productoId,
   fotos = [],
+  recargo,
 }: {
   accion: (datos: DatosProducto) => Promise<EstadoProducto>;
   valores: DatosProducto;
@@ -55,6 +57,8 @@ export function FormularioProducto({
   /** Solo al editar: las fotos necesitan un producto que ya exista. */
   productoId?: string;
   fotos?: Foto[];
+  /** Porcentaje que se le suma al precio para pagar en bolívares. */
+  recargo: number;
 }) {
   const {
     register,
@@ -151,15 +155,19 @@ export function FormularioProducto({
 
       <Seccion
         titulo="Precio"
-        nota="El precio de referencia es lo que cuesta en un marketplace con comisión. Es el número tachado del bloque de ahorro; déjalo vacío si no hay comparación honesta que hacer."
+        nota="Se carga el precio pagando en dólares. El de pagar en bolívares se calcula solo sumándole el recargo, y es el que sale grande en la tienda."
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Campo etiqueta="Precio en dólares" error={errors.precio_usd?.message}>
+          <Campo
+            etiqueta="Precio en divisas"
+            error={errors.precio_usd?.message}
+          >
             <input
               {...register("precio_usd")}
               inputMode="decimal"
               className={errors.precio_usd ? estiloEntradaMal : estiloEntrada}
             />
+            <PrecioEnBolivares control={control} recargo={recargo} />
           </Campo>
           <Campo
             etiqueta="Precio de referencia"
@@ -344,6 +352,38 @@ export function FormularioProducto({
         </Link>
       </div>
     </form>
+  );
+}
+
+/**
+ * El precio derivado, mientras se escribe.
+ *
+ * Sin esto hay que confiar en que la cuenta se hizo bien y descubrir el número
+ * al ver la ficha publicada. Se usa `useWatch` y no `watch()`: el segundo
+ * suscribe el formulario entero y rompe la memoización del compilador.
+ */
+function PrecioEnBolivares({
+  control,
+  recargo,
+}: {
+  control: Control<DatosProducto>;
+  recargo: number;
+}) {
+  const enDivisas = useWatch({ control, name: "precio_usd" });
+  const numero = Number(String(enDivisas).replace(",", "."));
+
+  if (!Number.isFinite(numero) || numero <= 0) return null;
+
+  const enBolivares = Math.round(numero * (1 + recargo / 100) * 100) / 100;
+
+  return (
+    <span className="text-texto-meta mt-1 block text-xs">
+      Pagando en bolívares:{" "}
+      <span className="text-texto-2">
+        ${enBolivares.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
+      </span>{" "}
+      (+{recargo} %)
+    </span>
   );
 }
 
