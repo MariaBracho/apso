@@ -212,6 +212,43 @@ export async function listarMarcas() {
   return data ?? [];
 }
 
+export type MovimientoInventario = {
+  id: string;
+  cantidad: number;
+  stock_resultante: number;
+  motivo: "entrada" | "venta" | "devolucion" | "ajuste";
+  nota: string | null;
+  creado_en: string;
+  pedido: { numero: string } | null;
+  perfil: { nombre: string } | null;
+};
+
+/**
+ * El historial de inventario de un producto, del más reciente al más viejo.
+ *
+ * Se acota a los últimos 50: el historial existe para responder «¿qué pasó con
+ * estas unidades?», y esa pregunta casi siempre mira los últimos días.
+ */
+export async function listarMovimientos(
+  productoId: string,
+): Promise<MovimientoInventario[]> {
+  const supabase = await crearClienteServidor();
+
+  const { data } = await supabase
+    .from("movimientos_inventario")
+    .select(
+      `id, cantidad, stock_resultante, motivo, nota, creado_en,
+       pedido:pedidos (numero),
+       perfil:perfiles (nombre)`,
+    )
+    .eq("producto_id", productoId)
+    .order("creado_en", { ascending: false })
+    .limit(50)
+    .returns<MovimientoInventario[]>();
+
+  return data ?? [];
+}
+
 export type MarcaAdmin = {
   id: string;
   nombre: string;

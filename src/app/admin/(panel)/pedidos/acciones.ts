@@ -134,22 +134,15 @@ async function ajustarInventario(
   for (const item of items) {
     if (!item.producto_id) continue;
 
-    const { data: producto } = await supabase
-      .from("productos")
-      .select("stock")
-      .eq("id", item.producto_id)
-      .maybeSingle();
-
-    if (!producto) continue;
-
-    const siguiente = descontar
-      ? Math.max(0, producto.stock - item.cantidad)
-      : producto.stock + item.cantidad;
-
-    await supabase
-      .from("productos")
-      .update({ stock: siguiente })
-      .eq("id", item.producto_id);
+    // Por `mover_inventario` y no actualizando el stock a mano: así el cambio
+    // y su registro ocurren en la misma transacción, y el historial del
+    // producto explica de qué pedido salió cada unidad.
+    await supabase.rpc("mover_inventario", {
+      p_producto: item.producto_id,
+      p_cantidad: descontar ? -item.cantidad : item.cantidad,
+      p_motivo: descontar ? "venta" : "devolucion",
+      p_pedido: pedidoId,
+    });
   }
 
   revalidatePath("/admin/productos");
@@ -200,10 +193,17 @@ export async function borrarSerial(serialId: string) {
   revalidatePath("/admin/pedidos");
 }
 
-/** Ajuste manual del stock, para cuadrar con el conteo físico. */
+/**
+ * Corrige el stock a un número concreto, para cuadrar con el conteo físico.
+ *
+ * Se guarda como movimiento igual que todo lo demás: la diferencia contra lo
+ * que había es lo que queda registrado, porque «quedó en 6» sin saber de cuánto
+ * venía no explica nada.
+ */
 export async function ajustarStock(
   productoId: string,
   stock: number,
+  nota?: string,
 ): Promise<EstadoAccion> {
   await exigirAdmin();
 
@@ -212,10 +212,57 @@ export async function ajustarStock(
   }
 
   const supabase = await crearClienteServidor();
-  const { error } = await supabase
+
+  const { data: producto } = await supabase
     .from("productos")
-    .update({ stock })
-    .eq("id", productoId);
+    .select("stock")
+    .eq("id", productoId)
+    .maybeSingle();
+
+  if (!producto) return { error: "Ese producto ya no está." };
+
+  const diferencia = stock - producto.stock;
+  if (diferencia === 0) return { ok: true };
+
+  const { error } = await supabase.rpc("mover_inventario", {
+    p_producto: productoId,
+    p_cantidad: diferencia,
+    p_motivo: "ajuste",
+    p_nota: nota ?? null,
+  });
+
+  if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+  revalidatePath("/admin/productos");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Suma existencias que acaban de llegar.
+ *
+ * Es distinto de corregir el total: aquí se dice cuántas entraron, que es como
+ * se piensa al recibir mercancía, y el historial queda diciendo «entraron 5»
+ * en vez de «alguien cambió el número a 6».
+ */
+export async function agregarExistencias(
+  productoId: string,
+  cantidad: number,
+  nota?: string,
+): Promise<EstadoAccion> {
+  await exigirAdmin();
+
+  if (!Number.isInteger(cantidad) || cantidad < 1) {
+    return { error: "Escribe cuántas unidades entraron, mínimo una." };
+  }
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase.rpc("mover_inventario", {
+    p_producto: productoId,
+    p_cantidad: cantidad,
+    p_motivo: "entrada",
+    p_nota: nota ?? null,
+  });
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 

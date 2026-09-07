@@ -270,6 +270,64 @@ export type Database = {
         }
         Relationships: []
       }
+      movimientos_inventario: {
+        Row: {
+          cantidad: number
+          creado_en: string
+          id: string
+          motivo: Database["public"]["Enums"]["motivo_movimiento"]
+          nota: string | null
+          pedido_id: string | null
+          perfil_id: string | null
+          producto_id: string
+          stock_resultante: number
+        }
+        Insert: {
+          cantidad: number
+          creado_en?: string
+          id?: string
+          motivo: Database["public"]["Enums"]["motivo_movimiento"]
+          nota?: string | null
+          pedido_id?: string | null
+          perfil_id?: string | null
+          producto_id: string
+          stock_resultante: number
+        }
+        Update: {
+          cantidad?: number
+          creado_en?: string
+          id?: string
+          motivo?: Database["public"]["Enums"]["motivo_movimiento"]
+          nota?: string | null
+          pedido_id?: string | null
+          perfil_id?: string | null
+          producto_id?: string
+          stock_resultante?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           comprobante_url: string | null
@@ -754,6 +812,16 @@ export type Database = {
     }
     Functions: {
       es_admin: { Args: never; Returns: boolean }
+      mover_inventario: {
+        Args: {
+          p_cantidad: number
+          p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
+          p_nota?: string
+          p_pedido?: string
+          p_producto: string
+        }
+        Returns: number
+      }
       reclamar_pedidos_por_whatsapp: { Args: never; Returns: number }
       tasa_vigente: { Args: never; Returns: number }
     }
@@ -781,6 +849,7 @@ export type Database = {
         | "binance"
         | "efectivo"
         | "tarjeta_internacional"
+      motivo_movimiento: "entrada" | "venta" | "devolucion" | "ajuste"
       rol_usuario: "cliente" | "admin"
       tipo_entrega: "punto_fijo" | "envio_nacional"
     }
@@ -938,6 +1007,7 @@ export const Constants = {
         "efectivo",
         "tarjeta_internacional",
       ],
+      motivo_movimiento: ["entrada", "venta", "devolucion", "ajuste"],
       rol_usuario: ["cliente", "admin"],
       tipo_entrega: ["punto_fijo", "envio_nacional"],
     },

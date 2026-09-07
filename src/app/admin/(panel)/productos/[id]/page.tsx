@@ -8,8 +8,10 @@ import {
   listarCategorias,
   listarFotos,
   listarMarcas,
+  listarMovimientos,
   obtenerProductoAdmin,
 } from "@/lib/admin";
+import { HistorialInventario } from "@/components/admin/historial-inventario";
 import { obtenerRecargo } from "@/lib/catalogo";
 
 export const metadata: Metadata = { title: "Editar producto" };
@@ -21,13 +23,15 @@ export default async function PaginaEditarProducto({
 }) {
   const { id } = await params;
 
-  const [producto, categorias, marcas, fotos, recargo] = await Promise.all([
-    obtenerProductoAdmin(id),
-    listarCategorias(),
-    listarMarcas(),
-    listarFotos(id),
-    obtenerRecargo(),
-  ]);
+  const [producto, categorias, marcas, fotos, recargo, movimientos] =
+    await Promise.all([
+      obtenerProductoAdmin(id),
+      listarCategorias(),
+      listarMarcas(),
+      listarFotos(id),
+      obtenerRecargo(),
+      listarMovimientos(id),
+    ]);
 
   if (!producto) notFound();
 
@@ -82,6 +86,18 @@ export default async function PaginaEditarProducto({
         fotos={fotos}
         recargo={recargo}
       />
+
+      <section className="mt-12">
+        <h2 className="etiqueta text-texto-3 text-[10px]">
+          Historial de inventario
+        </h2>
+        <p className="text-texto-meta mt-1.5 mb-4 text-xs leading-relaxed">
+          Cada cambio de existencias queda aquí. Las unidades que llegan se
+          suman desde el «+» del inventario; las ventas se descuentan solas al
+          confirmar el pago.
+        </p>
+        <HistorialInventario movimientos={movimientos} />
+      </section>
     </div>
   );
 }

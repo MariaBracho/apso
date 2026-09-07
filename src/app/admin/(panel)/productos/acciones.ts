@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { ajustarStock } from "@/app/admin/(panel)/pedidos/acciones";
 import { type DatosProducto, esquemaProducto, validar } from "@/lib/esquemas";
 import { exigirAdmin } from "@/lib/sesion";
 import { generarSlug } from "@/lib/texto";
@@ -90,12 +91,18 @@ export async function actualizarProducto(
   if (!preparado.ok) return { error: preparado.error };
 
   const supabase = await crearClienteServidor();
-  const { error } = await supabase
-    .from("productos")
-    .update(preparado.fila)
-    .eq("id", id);
+
+  // El stock sale del update y va por `mover_inventario`: escribirlo aquí lo
+  // cambiaría sin dejar movimiento, y el historial tendría un salto sin
+  // explicación justo donde hace falta explicar.
+  const { stock, ...resto } = preparado.fila;
+
+  const { error } = await supabase.from("productos").update(resto).eq("id", id);
 
   if (error) return { error: mensajeDeError(error.code, error.message) };
+
+  const fallo = await ajustarStock(id, stock, "Cambiado desde la ficha");
+  if (fallo && "error" in fallo) return { error: fallo.error };
 
   revalidatePath("/admin/productos");
   redirect("/admin/productos");
