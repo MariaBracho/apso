@@ -31,37 +31,42 @@ export function EditorStock({
   const [llegaron, setLlegaron] = useState("");
   const [pendiente, iniciar] = useTransition();
 
-  const sumar = () =>
-    iniciar(async () => {
-      const cuantas = Number(llegaron);
-      if (!cuantas) {
-        setEntrando(false);
-        setLlegaron("");
-        return;
-      }
+  /**
+   * El campo se cierra ANTES de esperar al servidor.
+   *
+   * Confirma con Enter y también al perder el foco, y navegar justo después de
+   * pulsar Enter dispara el blur encima: se registraba la entrada dos veces y
+   * el inventario quedaba con el doble. Vaciando el estado de entrada de
+   * inmediato, la segunda llamada no encuentra nada que enviar.
+   */
+  const sumar = () => {
+    const cuantas = Number(llegaron);
+    setEntrando(false);
+    setLlegaron("");
 
+    if (!cuantas || pendiente) return;
+
+    iniciar(async () => {
       const resultado = await agregarExistencias(id, cuantas);
       if (resultado && "error" in resultado) {
         toast.error(resultado.error);
         return;
       }
 
-      setEntrando(false);
-      setLlegaron("");
       toast.success(
         `${nombre}: entraron ${cuantas}, quedan ${stock + cuantas}`,
       );
     });
+  };
 
-  const guardar = () =>
+  /** Mismo cuidado que en `sumar`: se cierra antes de esperar. */
+  const guardar = () => {
+    const numero = Number(valor);
+    setEditando(false);
+
+    if (numero === stock || pendiente) return;
+
     iniciar(async () => {
-      const numero = Number(valor);
-
-      if (numero === stock) {
-        setEditando(false);
-        return;
-      }
-
       const resultado = await ajustarStock(id, numero);
       if (resultado && "error" in resultado) {
         toast.error(resultado.error);
@@ -69,9 +74,9 @@ export function EditorStock({
         return;
       }
 
-      setEditando(false);
       toast.success(`${nombre}: ${stock} → ${numero} en inventario`);
     });
+  };
 
   if (entrando) {
     return (
