@@ -121,7 +121,10 @@ function TasaDelDia({ tasa }: { tasa: number | null }) {
   if (tasa === null) return null;
 
   return (
-    <div className="hidden text-right sm:block">
+    // `lg` y no `sm`: por debajo de eso la tasa vive en la fila de abajo, junto
+    // a las categorías. Con `sm` se solapaban y salía dos veces entre 640 y
+    // 1023 px.
+    <div className="hidden text-right lg:block">
       {/* Se nombra la fuente: es la del BCV y nada más, así que el cliente
           puede contrastarla. */}
       <p className="etiqueta text-texto-meta text-[9px]">Tasa BCV</p>

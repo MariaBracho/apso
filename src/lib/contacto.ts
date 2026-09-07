@@ -11,6 +11,11 @@ export const WHATSAPP_ASESOR = "584246056110";
 /** El mismo número, como se lee en pantalla. */
 export const WHATSAPP_VISIBLE = "+58 424 605 6110";
 
+export const INSTAGRAM = {
+  usuario: "apso.ve",
+  url: "https://www.instagram.com/apso.ve/",
+};
+
 /** Para armar el enlace al pedido dentro del correo. */
 export const SITIO =
   process.env.NEXT_PUBLIC_SITIO ?? "https://apso.store";

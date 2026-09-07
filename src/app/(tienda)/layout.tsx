@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { EnlaceInstagram } from "@/components/marca/enlace-instagram";
 import { BarraSuperior } from "@/components/tienda/barra-superior";
 import { contarCarrito } from "@/lib/carrito";
 import { obtenerCategoriasRaiz, obtenerTasaVigente } from "@/lib/catalogo";
@@ -35,15 +36,19 @@ export default async function LayoutTienda({
 function Pie() {
   return (
     <footer className="border-borde-sutil mt-16 border-t">
-      <div className="text-texto-meta mx-auto max-w-[1400px] px-6 py-8 text-xs">
-        <p>
-          apso · Punto Fijo, estado Falcón. Entrega a domicilio y envíos
-          nacionales.
-        </p>
-        <p className="mt-1">
-          Precios en dólares. El monto en bolívares se calcula con la tasa del
-          día y se confirma al hacer el pedido.
-        </p>
+      <div className="text-texto-meta mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-8 text-xs sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p>
+            apso · Punto Fijo, estado Falcón. Entrega a domicilio y envíos
+            nacionales.
+          </p>
+          <p className="mt-1">
+            Precios en dólares. El monto en bolívares se calcula con la tasa del
+            día y se confirma al hacer el pedido.
+          </p>
+        </div>
+
+        <EnlaceInstagram />
       </div>
     </footer>
   );

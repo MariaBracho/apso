@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { EnlaceInstagram } from "@/components/marca/enlace-instagram";
 import { Logo } from "@/components/marca/isotipo";
 
 export const metadata: Metadata = {
@@ -64,8 +65,11 @@ export default function PaginaBienvenida() {
         </div>
       </main>
 
-      <footer className="text-texto-meta mx-auto w-full max-w-[1400px] px-6 py-8 text-xs">
-        Punto Fijo, estado Falcón · Entrega a domicilio y envíos nacionales
+      <footer className="text-texto-meta mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-8 text-xs">
+        <span>
+          Punto Fijo, estado Falcón · Entrega a domicilio y envíos nacionales
+        </span>
+        <EnlaceInstagram />
       </footer>
     </div>
   );
