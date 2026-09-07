@@ -5,14 +5,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { fijarTasa } from "@/app/admin/(panel)/tasa/acciones";
+import { fijarMargen, fijarTasa } from "@/app/admin/(panel)/tasa/acciones";
 import {
   Campo,
   ErrorServidor,
   estiloEntrada,
   estiloEntradaMal,
 } from "@/components/formulario/campos";
-import { type DatosTasa, esquemaTasa } from "@/lib/esquemas";
+import {
+  type DatosMargen,
+  type DatosTasa,
+  esquemaMargen,
+  esquemaTasa,
+} from "@/lib/esquemas";
 
 export function FormularioTasa() {
   const {
@@ -79,6 +84,80 @@ export function FormularioTasa() {
       >
         {isSubmitting ? "Guardando…" : "Fijar tasa"}
       </button>
+    </form>
+  );
+}
+
+/**
+ * Margen de venta.
+ *
+ * Es lo que separa la tasa del BCV de la que se cobra. Existe porque la tienda
+ * cobra en bolívares pero repone comprando dólares: vender a tasa BCV pelada
+ * significa perder la diferencia en cada venta.
+ */
+export function FormularioMargen({ margen }: { margen: number }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<DatosMargen>({
+    resolver: yupResolver(esquemaMargen),
+    defaultValues: { margen_tasa_pct: margen },
+    mode: "onBlur",
+  });
+
+  const [errorServidor, setErrorServidor] = useState<string | null>(null);
+
+  const enviar = handleSubmit(async (datos) => {
+    setErrorServidor(null);
+
+    const resultado = await fijarMargen(datos);
+    if (resultado && "error" in resultado) {
+      setErrorServidor(resultado.error);
+      return;
+    }
+
+    toast.success(`Margen fijado en ${datos.margen_tasa_pct} %`, {
+      description: "Los precios en bolívares del catálogo ya cambiaron.",
+    });
+  });
+
+  return (
+    <form onSubmit={enviar} noValidate className="space-y-4">
+      <h2 className="etiqueta text-texto-3 text-[10px]">Margen de venta</h2>
+
+      <div className="sm:w-56">
+        <Campo
+          etiqueta="Porcentaje sobre el BCV"
+          ayuda="En 0 se vende a tasa BCV pelada."
+          error={errors.margen_tasa_pct?.message}
+        >
+          <input
+            {...register("margen_tasa_pct")}
+            inputMode="decimal"
+            placeholder="19"
+            className={
+              errors.margen_tasa_pct ? estiloEntradaMal : estiloEntrada
+            }
+          />
+        </Campo>
+      </div>
+
+      <ErrorServidor mensaje={errorServidor} />
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora border px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
+      >
+        {isSubmitting ? "Guardando…" : "Guardar margen"}
+      </button>
+
+      <p className="text-texto-meta text-xs leading-relaxed">
+        Cambiar esto mueve el precio en bolívares de todo el catálogo de
+        inmediato. Los pedidos ya hechos no se tocan: cada uno congeló su tasa
+        al enviarse.
+      </p>
     </form>
   );
 }

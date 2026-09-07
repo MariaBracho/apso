@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { type DatosTasa, esquemaTasa, validar } from "@/lib/esquemas";
+import {
+  type DatosMargen,
+  type DatosTasa,
+  esquemaMargen,
+  esquemaTasa,
+  validar,
+} from "@/lib/esquemas";
 import { exigirAdmin } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -31,6 +37,34 @@ export async function fijarTasa(datos: DatosTasa): Promise<EstadoTasa> {
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
   // La tasa sale en la barra superior de toda la tienda.
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Cambia el margen de venta.
+ *
+ * Esto mueve el precio en bolívares de todo el catálogo de inmediato. Los
+ * pedidos ya hechos no se tocan: cada uno congeló su tasa al enviarse.
+ */
+export async function fijarMargen(datos: DatosMargen): Promise<EstadoTasa> {
+  const sesion = await exigirAdmin();
+
+  const resultado = await validar(esquemaMargen, datos);
+  if (!resultado.ok) return { error: resultado.error };
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase
+    .from("ajustes")
+    .update({
+      margen_tasa_pct: resultado.valores.margen_tasa_pct,
+      actualizado_en: new Date().toISOString(),
+      actualizado_por: sesion.id,
+    })
+    .eq("id", true);
+
+  if (error) return { error: `No se pudo guardar: ${error.message}` };
+
   revalidatePath("/", "layout");
   return { ok: true };
 }

@@ -92,7 +92,9 @@ function TasaDelDia({ tasa }: { tasa: number | null }) {
 
   return (
     <div className="hidden text-right sm:block">
-      <p className="etiqueta text-texto-meta text-[9px]">Tasa hoy</p>
+      {/* «Nuestra tasa» y no «Tasa hoy»: lleva el margen de venta encima, así
+          que no es la que publica el BCV y no debe leerse como si lo fuera. */}
+      <p className="etiqueta text-texto-meta text-[9px]">Nuestra tasa</p>
       <p className="font-display text-texto-2 text-sm font-medium">
         {formatearTasa(tasa)}
       </p>

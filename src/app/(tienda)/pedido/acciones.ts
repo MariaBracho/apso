@@ -7,6 +7,7 @@ import {
   leerCarrito,
   obtenerCarritoActual,
 } from "@/lib/carrito";
+import { obtenerTasaVigente } from "@/lib/catalogo";
 import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
 import { COOKIE_PEDIDO } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
@@ -40,15 +41,12 @@ export async function enviarPedido(
 
   const supabase = crearClienteServicio();
 
-  const { data: tasaFila } = await supabase
-    .from("tasas_cambio")
-    .select("valor")
-    .lte("vigente_desde", new Date().toISOString())
-    .order("vigente_desde", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // La misma función que usa toda la tienda, margen incluido. Antes esto
+  // consultaba `tasas_cambio` por su cuenta: al aparecer el margen, el cliente
+  // habría visto un monto en el checkout y otro en su confirmación.
+  const tasa = await obtenerTasaVigente();
 
-  if (!tasaFila) {
+  if (tasa === null) {
     return {
       error: "No hay tasa del día cargada. Escríbenos por WhatsApp y lo cerramos por ahí.",
     };
@@ -89,7 +87,7 @@ export async function enviarPedido(
       para_que_lo_usa: pedido.para_que_lo_usa,
       es_encargo: esEncargo,
       plazo_encargo_dias: plazoEncargo && plazoEncargo > 0 ? plazoEncargo : null,
-      tasa_cambio: tasaFila.valor,
+      tasa_cambio: tasa,
       subtotal_usd: subtotalUsd,
       // El flete se cotiza por WhatsApp y se suma después, así que el total
       // arranca igual al subtotal.

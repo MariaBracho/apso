@@ -48,21 +48,25 @@ function avisarFallo(donde: string, error: { message: string } | null) {
   if (error) console.error(`[catalogo] ${donde}: ${error.message}`);
 }
 
-/** La tasa vigente. Se muestra en la barra superior de todas las pantallas. */
+/**
+ * La tasa con la que se cobra: la del BCV más el margen de venta.
+ *
+ * Todo bolívar que ve el cliente sale de aquí — barra superior, tarjeta, ficha,
+ * carrito, checkout y el pedido que se guarda. Una sola función y un solo
+ * cálculo, que vive en `tasa_de_venta()` en la base: si el checkout y el pedido
+ * la calcularan por su cuenta, bastaría con que uno se olvidara del margen para
+ * que el cliente viera un monto y su confirmación dijera otro.
+ *
+ * La del BCV pelada solo la usa el panel, como referencia.
+ */
 export async function obtenerTasaVigente(): Promise<number | null> {
   const supabase = await crearClienteServidor();
 
-  const { data, error } = await supabase
-    .from("tasas_cambio")
-    .select("valor")
-    .lte("vigente_desde", new Date().toISOString())
-    .order("vigente_desde", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("tasa_de_venta");
 
-  avisarFallo("tasa vigente", error);
-  if (error || !data) return null;
-  return Number(data.valor);
+  avisarFallo("tasa de venta", error);
+  if (error || data === null) return null;
+  return Number(data);
 }
 
 /**

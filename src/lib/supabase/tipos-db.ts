@@ -34,6 +34,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      ajustes: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          id: boolean
+          margen_tasa_pct: number
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          id?: boolean
+          margen_tasa_pct?: number
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          id?: boolean
+          margen_tasa_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajustes_actualizado_por_fkey"
+            columns: ["actualizado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       busquedas: {
         Row: {
           creado_en: string
@@ -393,6 +422,9 @@ export type Database = {
           actualizado_en: string
           atendido_por: string | null
           ciudad_destino: string | null
+          cliente_correo: string | null
+          cliente_nombre: string
+          cliente_whatsapp: string
           confirmado_en: string | null
           creado_en: string
           empresa_encomienda: string | null
@@ -402,12 +434,13 @@ export type Database = {
           estado: Database["public"]["Enums"]["estado_pedido"]
           flete_usd: number
           id: string
+          inventario_descontado: boolean
           metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
           motivo_cancelacion: string | null
           numero: string
           numero_guia: string | null
           para_que_lo_usa: string | null
-          perfil_id: string
+          perfil_id: string | null
           plazo_encargo_dias: number | null
           subtotal_usd: number
           tasa_cambio: number
@@ -417,6 +450,9 @@ export type Database = {
           actualizado_en?: string
           atendido_por?: string | null
           ciudad_destino?: string | null
+          cliente_correo?: string | null
+          cliente_nombre: string
+          cliente_whatsapp: string
           confirmado_en?: string | null
           creado_en?: string
           empresa_encomienda?: string | null
@@ -426,12 +462,13 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_pedido"]
           flete_usd?: number
           id?: string
+          inventario_descontado?: boolean
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"] | null
           motivo_cancelacion?: string | null
           numero?: string
           numero_guia?: string | null
           para_que_lo_usa?: string | null
-          perfil_id: string
+          perfil_id?: string | null
           plazo_encargo_dias?: number | null
           subtotal_usd: number
           tasa_cambio: number
@@ -441,6 +478,9 @@ export type Database = {
           actualizado_en?: string
           atendido_por?: string | null
           ciudad_destino?: string | null
+          cliente_correo?: string | null
+          cliente_nombre?: string
+          cliente_whatsapp?: string
           confirmado_en?: string | null
           creado_en?: string
           empresa_encomienda?: string | null
@@ -450,12 +490,13 @@ export type Database = {
           estado?: Database["public"]["Enums"]["estado_pedido"]
           flete_usd?: number
           id?: string
+          inventario_descontado?: boolean
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"] | null
           motivo_cancelacion?: string | null
           numero?: string
           numero_guia?: string | null
           para_que_lo_usa?: string | null
-          perfil_id?: string
+          perfil_id?: string | null
           plazo_encargo_dias?: number | null
           subtotal_usd?: number
           tasa_cambio?: number
@@ -713,6 +754,8 @@ export type Database = {
     }
     Functions: {
       es_admin: { Args: never; Returns: boolean }
+      reclamar_pedidos_por_whatsapp: { Args: never; Returns: number }
+      tasa_de_venta: { Args: never; Returns: number }
       tasa_vigente: { Args: never; Returns: number }
     }
     Enums: {

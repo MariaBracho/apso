@@ -198,6 +198,20 @@ export const esquemaTasa = yup.object({
 
 export type DatosTasa = yup.InferType<typeof esquemaTasa>;
 
+export const esquemaMargen = yup.object({
+  margen_tasa_pct: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El margen tiene que ser un número.")
+    .required("Escribe el margen.")
+    .min(0, "El margen no puede ser negativo.")
+    // El tope está también en la base. Un margen de tres dígitos casi siempre
+    // es un cero de más, y aquí se paga en lo que cobra el cliente.
+    .max(100, "Un margen de más de 100 % no parece intencional. Revísalo."),
+});
+
+export type DatosMargen = yup.InferType<typeof esquemaMargen>;
+
 // ---------------------------------------------------------------------------
 // Perfil del cliente
 // ---------------------------------------------------------------------------
