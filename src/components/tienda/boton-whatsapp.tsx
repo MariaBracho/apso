@@ -5,7 +5,11 @@ import { useState } from "react";
 import { WHATSAPP_VISIBLE, enlaceWhatsapp } from "@/lib/contacto";
 
 /**
- * Abrir WhatsApp, con salida para quien no lo tenga instalado.
+ * Envío del pedido por WhatsApp, con salida para quien no lo tenga instalado.
+ *
+ * El botón nombra lo que hace —enviar el pedido— y no la app que se abre:
+ * «Abrir WhatsApp» sonaba a un paso de más cuando en realidad es el paso que
+ * cierra la compra.
  *
  * El caso borde está en el flujo 02: si no puede abrir WhatsApp, se le muestra
  * el mensaje para copiar y el número. El pedido ya quedó registrado igual, así
@@ -22,7 +26,7 @@ export function BotonWhatsapp({ mensaje }: { mensaje: string }) {
         rel="noopener noreferrer"
         className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 block w-full px-6 py-3.5 text-center text-sm font-semibold transition-colors"
       >
-        Abrir WhatsApp
+        Envía tu pedido por WhatsApp
       </a>
 
       <button
