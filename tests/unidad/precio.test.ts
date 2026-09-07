@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  aDivisa,
+  esPagoEnDivisa,
+  precioSegunPago,
+  preciosDe,
+} from "@/lib/precio";
+
+describe("preciosDe", () => {
+  it("deriva el precio en bolívares sumando el recargo al de divisas", () => {
+    // El ejemplo con el que María describió el modelo.
+    const precios = preciosDe(680, 19);
+
+    expect(precios.divisa).toBe(680);
+    expect(precios.bolivares).toBe(809.2);
+    expect(precios.ahorro).toBe(129.2);
+  });
+
+  it("sin recargo los dos precios son el mismo y no hay ahorro que anunciar", () => {
+    const precios = preciosDe(120, 0);
+
+    expect(precios.bolivares).toBe(120);
+    expect(precios.ahorro).toBe(0);
+  });
+
+  it("redondea a dos decimales, que es como se muestra el dinero", () => {
+    // 62 × 1,19 = 73,78 exacto; sin redondear, casos así arrastran decimales
+    // que hacen que el total del carrito no cuadre con la suma de las líneas.
+    expect(preciosDe(62, 19).bolivares).toBe(73.78);
+    expect(preciosDe(64, 19).bolivares).toBe(76.16);
+
+    // Un caso con arrastre real en coma flotante.
+    const precios = preciosDe(19.99, 19);
+    expect(precios.bolivares).toBe(23.79);
+    expect(Number.isInteger(precios.bolivares * 100)).toBe(true);
+  });
+
+  it("el ahorro es exactamente la diferencia entre los dos precios", () => {
+    for (const base of [10, 62, 120, 690, 1999.99]) {
+      const p = preciosDe(base, 19);
+      expect(p.ahorro).toBeCloseTo(p.bolivares - p.divisa, 2);
+    }
+  });
+});
+
+describe("esPagoEnDivisa", () => {
+  it("bolívares para pago móvil y transferencia", () => {
+    expect(esPagoEnDivisa("pago_movil")).toBe(false);
+    expect(esPagoEnDivisa("transferencia_bs")).toBe(false);
+  });
+
+  it("divisas para lo que se cobra en dólares", () => {
+    expect(esPagoEnDivisa("zelle")).toBe(true);
+    expect(esPagoEnDivisa("binance")).toBe(true);
+    expect(esPagoEnDivisa("efectivo")).toBe(true);
+    expect(esPagoEnDivisa("tarjeta_internacional")).toBe(true);
+  });
+
+  it("un método desconocido cobra el precio en bolívares, que es el más alto", () => {
+    // Ante la duda se cobra de más y no de menos: cobrar de menos es una
+    // pérdida silenciosa, cobrar de más lo reclama el cliente.
+    expect(esPagoEnDivisa("")).toBe(false);
+    expect(esPagoEnDivisa("cripto_inventada")).toBe(false);
+  });
+});
+
+describe("precioSegunPago", () => {
+  const precios = preciosDe(680, 19);
+
+  it("cobra el de bolívares a quien paga en bolívares", () => {
+    expect(precioSegunPago(precios, "pago_movil")).toBe(809.2);
+  });
+
+  it("cobra el de divisas a quien paga en dólares", () => {
+    expect(precioSegunPago(precios, "zelle")).toBe(680);
+  });
+});
+
+describe("aDivisa", () => {
+  it("deshace el recargo: es la vuelta de preciosDe", () => {
+    for (const base of [62, 120, 680, 1999.99]) {
+      const { bolivares } = preciosDe(base, 19);
+      expect(aDivisa(bolivares, 19)).toBeCloseTo(base, 2);
+    }
+  });
+
+  it("sin recargo no cambia nada", () => {
+    expect(aDivisa(150, 0)).toBe(150);
+  });
+});
