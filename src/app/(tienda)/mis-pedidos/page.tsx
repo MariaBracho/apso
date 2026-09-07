@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { salirDeLaCuenta } from "@/app/(tienda)/entrar/acciones";
+import { FotoProducto } from "@/components/tienda/foto-producto";
 import { LineaDeTiempo } from "@/components/tienda/linea-de-tiempo";
 import { enlaceWhatsapp } from "@/lib/contacto";
 import {
@@ -33,6 +34,12 @@ type PedidoCliente = {
     garantia_meses: number | null;
     garantia_vitalicia: boolean;
     seriales: Array<{ serial: string }>;
+    // El nombre se congela en el pedido, pero la foto se lee del producto: es
+    // la misma cosa y no vale la pena copiarla por pedido. Puede faltar —
+    // `producto_id` es `on delete set null`.
+    producto: {
+      imagenes: Array<{ url: string; alt: string | null; orden: number }>;
+    } | null;
   }>;
   eventos: Array<{ id: string; descripcion: string; creado_en: string }>;
 };
@@ -53,7 +60,8 @@ export default async function PaginaMisPedidos() {
        total_usd, creado_en, entregado_en,
        items:pedido_items (
          id, nombre_producto, cantidad, garantia_meses, garantia_vitalicia,
-         seriales (serial)
+         seriales (serial),
+         producto:productos (imagenes:producto_imagenes (url, alt, orden))
        ),
        eventos:pedido_eventos (id, descripcion, creado_en)`,
     )
@@ -123,21 +131,41 @@ function Tarjeta({ pedido }: { pedido: PedidoCliente }) {
         </div>
       </div>
 
-      <ul className="text-texto-2 mt-4 space-y-1 text-sm">
-        {pedido.items.map((item) => (
-          <li key={item.id}>
-            <span className="text-texto-meta">{item.cantidad} ×</span>{" "}
-            {item.nombre_producto}
-            {item.seriales.length > 0 && (
-              // El serial se le muestra al cliente porque es suyo: es lo que
-              // le evita buscar la factura cuando reclame garantía.
-              <span className="text-texto-meta block text-xs">
-                Serial: {item.seriales.map((s) => s.serial).join(" · ")}
-                {textoGarantia(item) && ` · ${textoGarantia(item)}`}
-              </span>
-            )}
-          </li>
-        ))}
+      <ul className="text-texto-2 mt-4 space-y-3 text-sm">
+        {pedido.items.map((item) => {
+          // La principal es la de orden más bajo, igual que en la tienda. No se
+          // confía en el orden que devuelva la consulta.
+          const foto = [...(item.producto?.imagenes ?? [])].sort(
+            (a, b) => a.orden - b.orden,
+          )[0];
+
+          return (
+            <li key={item.id} className="flex items-start gap-3">
+              <div className="w-12 shrink-0">
+                <FotoProducto
+                  url={foto?.url}
+                  alt={foto?.alt ?? item.nombre_producto}
+                  alto="aspect-square"
+                  etiqueta=""
+                  tamanos="48px"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <span className="text-texto-meta">{item.cantidad} ×</span>{" "}
+                {item.nombre_producto}
+                {item.seriales.length > 0 && (
+                  // El serial se le muestra al cliente porque es suyo: es lo
+                  // que le evita buscar la factura cuando reclame garantía.
+                  <span className="text-texto-meta block text-xs">
+                    Serial: {item.seriales.map((s) => s.serial).join(" · ")}
+                    {textoGarantia(item) && ` · ${textoGarantia(item)}`}
+                  </span>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       {cancelado ? (
