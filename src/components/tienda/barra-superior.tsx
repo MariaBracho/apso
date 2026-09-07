@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/marca/isotipo";
+import { BuscadorMovil } from "@/components/tienda/buscador-movil";
 import { MenuCuenta } from "@/components/tienda/menu-cuenta";
 import { NavCategorias } from "@/components/tienda/nav-categorias";
 import type { Categoria } from "@/lib/catalogo";
@@ -25,7 +26,9 @@ export function BarraSuperior({
 }) {
   return (
     <header className="border-borde-sutil bg-fondo/95 sticky top-0 z-30 border-b backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-6">
+      {/* `relative` para que el buscador de teléfono se pueda superponer a esta
+          fila al abrirse, en vez de agregar una tercera. */}
+      <div className="relative mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-6">
         {/* Al catálogo y no a la portada: quien ya está dentro y toca el logo
             quiere volver a los productos, no a leer otra vez de qué va la
             tienda. La portada sigue en `/` para quien llega por primera vez. */}
@@ -45,8 +48,9 @@ export function BarraSuperior({
           />
         </form>
 
-        <div className="ml-auto flex items-center gap-4 md:ml-0">
+        <div className="ml-auto flex items-center gap-2 sm:gap-4 md:ml-0">
           <TasaDelDia tasa={tasa} />
+          <BuscadorMovil />
 
           <Link
             href="/carrito"

@@ -76,29 +76,73 @@ export type PedidoFila = {
   esperaMs: number;
 };
 
-export async function listarPedidos(): Promise<PedidoFila[]> {
+/**
+ * Cuántos pedidos ya atendidos se traen.
+ *
+ * El listado se carga entero para poder buscar en el navegador sin latencia.
+ * Sin tope, el día que haya mil pedidos la pantalla se vuelve impracticable, y
+ * sería un problema descubierto por la persona que menos tiempo tiene.
+ */
+const TOPE_HISTORIAL = 200;
+
+const CAMPOS_PEDIDO_FILA = `
+  id, numero, cliente_nombre, cliente_whatsapp, estado, para_que_lo_usa,
+  total_usd, creado_en,
+  items:pedido_items (
+    nombre_producto, cantidad,
+    producto:productos (${CAMPOS_PRODUCTO_EN_PEDIDO})
+  )
+`;
+
+export type ListadoPedidos = {
+  pedidos: PedidoFila[];
+  /** Cuántos hay en total, para poder decir si el tope dejó alguno fuera. */
+  total: number;
+};
+
+/**
+ * Los pedidos del panel.
+ *
+ * Lo que está por confirmar viene completo, sin tope: es el trabajo pendiente y
+ * esconder uno por antigüedad sería justo el fallo que no se puede permitir. Lo
+ * ya atendido se acota a los más recientes, que es lo que se consulta.
+ */
+export async function listarPedidos(): Promise<ListadoPedidos> {
   const supabase = await crearClienteServidor();
+
+  const [pendientes, atendidos, conteo] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select(CAMPOS_PEDIDO_FILA)
+      .eq("estado", "por_confirmar")
+      .order("creado_en", { ascending: true })
+      .returns<Omit<PedidoFila, "esperaMs">[]>(),
+
+    // Descendente para quedarse con los recientes, y se reordena abajo.
+    supabase
+      .from("pedidos")
+      .select(CAMPOS_PEDIDO_FILA)
+      .neq("estado", "por_confirmar")
+      .order("creado_en", { ascending: false })
+      .limit(TOPE_HISTORIAL)
+      .returns<Omit<PedidoFila, "esperaMs">[]>(),
+
+    supabase.from("pedidos").select("id", { count: "exact", head: true }),
+  ]);
 
   // Se ordena por antigüedad ascendente: el pedido que lleva más tiempo
   // esperando va arriba, porque es el que urge responder.
-  const { data } = await supabase
-    .from("pedidos")
-    .select(
-      `id, numero, cliente_nombre, cliente_whatsapp, estado, para_que_lo_usa,
-       total_usd, creado_en,
-       items:pedido_items (
-         nombre_producto, cantidad,
-         producto:productos (${CAMPOS_PRODUCTO_EN_PEDIDO})
-       )`,
-    )
-    .order("creado_en", { ascending: true })
-    .returns<Omit<PedidoFila, "esperaMs">[]>();
+  const filas = [...(pendientes.data ?? []), ...(atendidos.data ?? [])].sort(
+    (a, b) => a.creado_en.localeCompare(b.creado_en),
+  );
 
   const ahora = Date.now();
-  return (data ?? []).map((pedido) => ({
+  const pedidos = filas.map((pedido) => ({
     ...pedido,
     esperaMs: ahora - new Date(pedido.creado_en).getTime(),
   }));
+
+  return { pedidos, total: conteo.count ?? pedidos.length };
 }
 
 export type PedidoDetalle = {

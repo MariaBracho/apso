@@ -6,8 +6,9 @@ import { listarPedidos } from "@/lib/admin";
 export const metadata: Metadata = { title: "Pedidos" };
 
 export default async function PaginaPedidos() {
-  const pedidos = await listarPedidos();
+  const { pedidos, total } = await listarPedidos();
   const porConfirmar = pedidos.filter((p) => p.estado === "por_confirmar");
+  const fueraDelTope = total - pedidos.length;
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
@@ -19,8 +20,19 @@ export default async function PaginaPedidos() {
             día, y que cambiaran al teclear en el buscador haría perder de vista
             cuántos quedan de verdad por atender. */}
         <p className="text-texto-2 mt-1 text-sm">
-          {porConfirmar.length} por confirmar · {pedidos.length} en total
+          {porConfirmar.length} por confirmar · {total} en total
         </p>
+
+        {/* Se dice qué queda fuera. Un listado recortado en silencio se lee
+            como el listado completo, y el buscador parecería no encontrar algo
+            que sí existe. */}
+        {fueraDelTope > 0 && (
+          <p className="text-texto-meta mt-1 text-xs">
+            Están todos los que faltan por confirmar, más los atendidos más
+            recientes. Los otros {fueraDelTope} siguen guardados; se llega a
+            ellos por la dirección del pedido.
+          </p>
+        )}
       </header>
 
       {pedidos.length === 0 ? <Vacio /> : <ListaPedidos pedidos={pedidos} />}
