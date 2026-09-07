@@ -21,7 +21,39 @@ export default async function LayoutPanel({
   const sesion = await exigirAdmin();
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh flex-col lg:flex-row">
+      {/* En teléfono la barra lateral no cabe, y estaba simplemente escondida:
+          el panel quedaba sin ninguna forma de moverse entre pedidos,
+          inventario, marcas y tasa. Aquí va la misma navegación en horizontal. */}
+      <header className="bg-superficie border-borde-sutil sticky top-0 z-30 border-b lg:hidden">
+        <div className="flex items-center justify-between gap-4 px-5 pt-4">
+          <Link href="/admin/pedidos" className="flex items-center gap-2">
+            <Isotipo className="text-cian h-5 w-auto" />
+            <span className="font-display text-texto tracking-display font-semibold lowercase">
+              apso
+            </span>
+          </Link>
+
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="text-texto-meta truncate text-xs">
+              {sesion.nombre}
+            </span>
+            <form action={salir}>
+              <button
+                type="submit"
+                className="text-texto-meta hover:text-texto shrink-0 text-xs transition-colors"
+              >
+                Salir
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="px-5 py-3">
+          <NavPanel orientacion="horizontal" />
+        </div>
+      </header>
+
       <aside className="bg-superficie border-borde-sutil hidden w-56 shrink-0 flex-col border-r p-5 lg:flex">
         <Link href="/admin/productos" className="mb-8 flex items-center gap-2.5">
           <Isotipo className="text-cian h-6 w-auto" />

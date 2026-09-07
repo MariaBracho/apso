@@ -10,11 +10,27 @@ const ENLACES = [
   { href: "/admin/tasa", etiqueta: "Tasa" },
 ];
 
-export function NavPanel() {
+/**
+ * Navegación del panel.
+ *
+ * En columna dentro de la barra lateral del escritorio, y en fila en la barra
+ * de arriba del teléfono. Son cuatro enlaces: caben en una fila y no hace falta
+ * esconderlos detrás de un botón que hay que descubrir.
+ */
+export function NavPanel({
+  orientacion = "vertical",
+}: {
+  orientacion?: "vertical" | "horizontal";
+}) {
   const ruta = usePathname();
 
+  const disposicion =
+    orientacion === "horizontal"
+      ? "flex gap-1.5 overflow-x-auto"
+      : "space-y-1";
+
   return (
-    <nav className="space-y-1">
+    <nav className={disposicion}>
       {ENLACES.map((enlace) => {
         const activo = ruta.startsWith(enlace.href);
         return (
@@ -22,7 +38,9 @@ export function NavPanel() {
             key={enlace.href}
             href={enlace.href}
             aria-current={activo ? "page" : undefined}
-            className={`rounded-pildora block px-3.5 py-2 text-sm transition-colors ${
+            className={`rounded-pildora px-3.5 py-2 text-sm transition-colors ${
+              orientacion === "horizontal" ? "shrink-0" : "block"
+            } ${
               activo
                 ? "bg-superficie-alta text-texto font-medium"
                 : "text-texto-2 hover:text-texto hover:bg-superficie-2"

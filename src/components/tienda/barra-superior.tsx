@@ -83,6 +83,33 @@ export function BarraSuperior({
           )}
         </div>
       </div>
+
+      {/* En pantalla de teléfono no cabe nada de esto arriba, y escondido deja
+          la tienda sin salida: a Componentes se llega por el logo, pero a
+          Laptops no hay forma. La tasa va aquí por lo mismo — es el dato que se
+          mira antes que el precio y estaba invisible en móvil. */}
+      <div className="border-borde-sutil flex items-center gap-2 border-t px-6 py-2 lg:hidden">
+        <nav className="flex flex-1 gap-2 overflow-x-auto">
+          {categorias.map((categoria) => (
+            <Link
+              key={categoria.id}
+              href={`/${categoria.slug}`}
+              className="bg-superficie-2 text-texto-2 hover:text-texto rounded-pildora shrink-0 px-3 py-1.5 text-xs transition-colors"
+            >
+              {categoria.nombre}
+            </Link>
+          ))}
+        </nav>
+
+        {tasa !== null && (
+          <p className="text-texto-meta shrink-0 text-xs">
+            <span className="etiqueta text-[9px]">BCV</span>{" "}
+            <span className="font-display text-texto-2 font-medium">
+              {formatearTasa(tasa)}
+            </span>
+          </p>
+        )}
+      </div>
     </header>
   );
 }
