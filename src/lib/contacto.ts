@@ -25,7 +25,17 @@ export const ASESOR = {
   iniciales: "JB",
 };
 
-/** Arma el enlace de WhatsApp con el mensaje ya redactado. */
-export function enlaceWhatsapp(mensaje: string): string {
-  return `https://wa.me/${WHATSAPP_ASESOR}?text=${encodeURIComponent(mensaje)}`;
+/**
+ * Arma el enlace de WhatsApp con el mensaje ya redactado.
+ *
+ * Por omisión escribe a la tienda, que es lo que hace el cliente. Cuando
+ * escribe la tienda hay que pasarle el número de destino: sin eso, «Escribir al
+ * cliente» abría una conversación de apso consigo misma.
+ *
+ * wa.me quiere solo dígitos, y los números se guardan como `+58…`, así que se
+ * limpia aquí y no en cada llamada.
+ */
+export function enlaceWhatsapp(mensaje: string, numero?: string): string {
+  const destino = (numero ?? WHATSAPP_ASESOR).replace(/\D/g, "");
+  return `https://wa.me/${destino}?text=${encodeURIComponent(mensaje)}`;
 }

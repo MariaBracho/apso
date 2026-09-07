@@ -37,6 +37,42 @@ export type ImagenProducto = {
   alt: string | null;
 };
 
+/**
+ * Lo que hace falta para enlazar y mostrar un producto desde un pedido.
+ *
+ * Es nulo cuando la línea perdió el producto detrás: `pedido_items.producto_id`
+ * es `on delete set null`.
+ */
+export type ProductoEnPedido = {
+  slug: string;
+  categoria: { slug: string } | null;
+  imagenes: Array<{ url: string; alt: string | null; orden: number }>;
+} | null;
+
+/** Los campos que hay que pedir para armar un `ProductoEnPedido`. */
+export const CAMPOS_PRODUCTO_EN_PEDIDO = `
+  slug,
+  categoria:categorias (slug),
+  imagenes:producto_imagenes (url, alt, orden)
+`;
+
+/** La dirección de la ficha, o null si no hay adónde enlazar. */
+export function rutaProducto(producto: ProductoEnPedido): string | null {
+  if (!producto?.categoria) return null;
+  return `/${producto.categoria.slug}/${producto.slug}`;
+}
+
+/**
+ * La foto principal: la de orden más bajo, igual que en la tienda.
+ *
+ * Se ordena aquí en vez de confiar en lo que devuelva la consulta.
+ */
+export function fotoPrincipal(
+  producto: ProductoEnPedido,
+): { url: string; alt: string | null } | undefined {
+  return [...(producto?.imagenes ?? [])].sort((a, b) => a.orden - b.orden)[0];
+}
+
 export type ProductoListado = {
   id: string;
   slug: string;

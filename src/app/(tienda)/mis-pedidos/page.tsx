@@ -12,6 +12,12 @@ import {
   esCancelado,
 } from "@/lib/estados";
 import { formatearBs, formatearUsd } from "@/lib/formato";
+import {
+  CAMPOS_PRODUCTO_EN_PEDIDO,
+  type ProductoEnPedido,
+  fotoPrincipal,
+  rutaProducto,
+} from "@/lib/producto";
 import { obtenerSesion } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -34,12 +40,9 @@ type PedidoCliente = {
     garantia_meses: number | null;
     garantia_vitalicia: boolean;
     seriales: Array<{ serial: string }>;
-    // El nombre se congela en el pedido, pero la foto se lee del producto: es
-    // la misma cosa y no vale la pena copiarla por pedido. Puede faltar —
-    // `producto_id` es `on delete set null`.
-    producto: {
-      imagenes: Array<{ url: string; alt: string | null; orden: number }>;
-    } | null;
+    // El nombre se congela en el pedido, pero la foto y la dirección se leen
+    // del producto: es la misma cosa y no vale la pena copiarla por pedido.
+    producto: ProductoEnPedido;
   }>;
   eventos: Array<{ id: string; descripcion: string; creado_en: string }>;
 };
@@ -61,7 +64,7 @@ export default async function PaginaMisPedidos() {
        items:pedido_items (
          id, nombre_producto, cantidad, garantia_meses, garantia_vitalicia,
          seriales (serial),
-         producto:productos (imagenes:producto_imagenes (url, alt, orden))
+         producto:productos (${CAMPOS_PRODUCTO_EN_PEDIDO})
        ),
        eventos:pedido_eventos (id, descripcion, creado_en)`,
     )
@@ -133,14 +136,11 @@ function Tarjeta({ pedido }: { pedido: PedidoCliente }) {
 
       <ul className="text-texto-2 mt-4 space-y-3 text-sm">
         {pedido.items.map((item) => {
-          // La principal es la de orden más bajo, igual que en la tienda. No se
-          // confía en el orden que devuelva la consulta.
-          const foto = [...(item.producto?.imagenes ?? [])].sort(
-            (a, b) => a.orden - b.orden,
-          )[0];
+          const foto = fotoPrincipal(item.producto);
+          const ruta = rutaProducto(item.producto);
 
-          return (
-            <li key={item.id} className="flex items-start gap-3">
+          const contenido = (
+            <>
               <div className="w-12 shrink-0">
                 <FotoProducto
                   url={foto?.url}
@@ -163,6 +163,23 @@ function Tarjeta({ pedido }: { pedido: PedidoCliente }) {
                   </span>
                 )}
               </div>
+            </>
+          );
+
+          return (
+            <li key={item.id}>
+              {/* Enlaza a la ficha aunque el producto ya no se venda: ahí se
+                  ven las especificaciones de lo que tiene en su casa. */}
+              {ruta ? (
+                <Link
+                  href={ruta}
+                  className="hover:text-texto flex items-start gap-3 transition-colors"
+                >
+                  {contenido}
+                </Link>
+              ) : (
+                <div className="flex items-start gap-3">{contenido}</div>
+              )}
             </li>
           );
         })}

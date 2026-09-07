@@ -1,3 +1,4 @@
+import { crearClienteServicio } from "@/lib/supabase/servicio";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { disponibilidadDe } from "@/lib/producto";
 import type {
@@ -267,6 +268,34 @@ export async function obtenerProductoPorSlug(
     .eq("activo", true)
     .maybeSingle<ProductoFicha>();
 
+  if (error || !data) return null;
+  return data;
+}
+
+/**
+ * La ficha de un producto despublicado.
+ *
+ * Quien compró algo tiene derecho a volver a verlo aunque ya no se venda: el
+ * enlace desde su pedido no puede llevar a un 404. La ficha se muestra marcada
+ * como no disponible y sin forma de comprarla.
+ *
+ * Va con la clave de servicio porque la política de lectura exige `activo`.
+ * Se busca por slug exacto y solo se usa cuando la consulta pública ya falló,
+ * así que no abre el catálogo oculto a quien no tenga la dirección: ampliar la
+ * política habría dejado enumerar todos los despublicados desde el navegador.
+ */
+export async function obtenerProductoOculto(
+  slug: string,
+): Promise<ProductoFicha | null> {
+  const supabase = crearClienteServicio();
+
+  const { data, error } = await supabase
+    .from("productos")
+    .select(CAMPOS_FICHA)
+    .eq("slug", slug)
+    .maybeSingle<ProductoFicha>();
+
+  avisarFallo(`producto oculto ${slug}`, error);
   if (error || !data) return null;
   return data;
 }

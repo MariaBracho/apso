@@ -10,6 +10,7 @@ import {
   type ProductoFicha,
   obtenerCategoriaPorId,
   obtenerCategoriaPorSlug,
+  obtenerProductoOculto,
   obtenerProductoPorSlug,
   obtenerRecargo,
   obtenerTasaVigente,
@@ -26,7 +27,8 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { producto: slug } = await params;
-  const producto = await obtenerProductoPorSlug(slug);
+  const producto =
+    (await obtenerProductoPorSlug(slug)) ?? (await obtenerProductoOculto(slug));
 
   if (!producto) return { title: "Producto no encontrado" };
 
@@ -43,8 +45,13 @@ export default async function PaginaProducto({
 }) {
   const { producto: slugProducto } = await params;
 
-  const producto = await obtenerProductoPorSlug(slugProducto);
+  // Si no está publicado se busca igual: quien lo compró llega aquí desde su
+  // pedido y no puede toparse con un 404 por algo que sí tiene en su casa.
+  const publicado = await obtenerProductoPorSlug(slugProducto);
+  const producto = publicado ?? (await obtenerProductoOculto(slugProducto));
   if (!producto) notFound();
+
+  const disponible = publicado !== null;
 
   const [categoria, tasa, recargo] = await Promise.all([
     obtenerCategoriaPorSlug(producto.categoria.slug),
@@ -61,12 +68,17 @@ export default async function PaginaProducto({
       <Miga producto={producto} padre={padre} />
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_400px]">
-        <Galeria producto={producto} />
+        <Galeria producto={producto} disponible={disponible} />
 
         {/* La columna de decisión se queda fija: precio, ahorro y con quién
             hablar siguen a la vista mientras se leen las especificaciones. */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <PanelCompra producto={producto} tasa={tasa} recargo={recargo} />
+          <PanelCompra
+            producto={producto}
+            tasa={tasa}
+            recargo={recargo}
+            disponible={disponible}
+          />
         </div>
       </div>
     </div>
@@ -102,7 +114,13 @@ function Miga({
   );
 }
 
-function Galeria({ producto }: { producto: ProductoFicha }) {
+function Galeria({
+  producto,
+  disponible,
+}: {
+  producto: ProductoFicha;
+  disponible: boolean;
+}) {
   return (
     <div>
       {/* La foto se acota: sin tope, en pantallas anchas la columna estira el
@@ -132,8 +150,16 @@ function Galeria({ producto }: { producto: ProductoFicha }) {
             prioridad
             tamanos="(min-width: 640px) 520px, 100vw"
           />
+          {/* Sin publicar no se anuncia stock: decir «3 en stock» de algo que
+              no se puede comprar es peor que no decir nada. */}
           <span className="absolute top-4 left-4">
-            <BadgeDisponibilidad producto={producto} detallado sobreFoto />
+            {disponible ? (
+              <BadgeDisponibilidad producto={producto} detallado sobreFoto />
+            ) : (
+              <span className="etiqueta bg-fondo text-texto-meta border-borde rounded-pildora inline-flex items-center border px-2.5 py-1 text-[10px]">
+                No disponible
+              </span>
+            )}
           </span>
         </div>
       </div>
@@ -198,10 +224,13 @@ function PanelCompra({
   producto,
   tasa,
   recargo,
+  disponible,
 }: {
   producto: ProductoFicha;
   tasa: number | null;
   recargo: number;
+  /** Falso cuando el producto ya no está publicado. */
+  disponible: boolean;
 }) {
   const precios = preciosDe(producto.precio_usd, recargo);
   const ahorro = calcularAhorro(
@@ -242,9 +271,9 @@ function PanelCompra({
         )}
       </div>
 
-      {precios.ahorro > 0 && <BloqueDivisas precios={precios} />}
+      {disponible && precios.ahorro > 0 && <BloqueDivisas precios={precios} />}
 
-      {ahorro && (
+      {disponible && ahorro && (
         <BloqueAhorro
           precioReferencia={producto.precio_referencia_usd!}
           precio={precios.bolivares}
@@ -252,13 +281,25 @@ function PanelCompra({
         />
       )}
 
-      <CompraProducto
-        productoId={producto.id}
-        nombre={producto.nombre}
-        precioUsd={precios.bolivares}
-        stock={producto.stock}
-        tasa={tasa}
-      />
+      {/* Despublicado se ve pero no se compra. El botón de comprar algo que la
+          tienda ya no vende es una promesa que no se puede cumplir. */}
+      {disponible ? (
+        <CompraProducto
+          productoId={producto.id}
+          nombre={producto.nombre}
+          precioUsd={precios.bolivares}
+          stock={producto.stock}
+          tasa={tasa}
+        />
+      ) : (
+        <div className="border-borde rounded-tarjeta border border-dashed p-4">
+          <p className="etiqueta text-texto-3 text-[10px]">No disponible</p>
+          <p className="text-texto-2 mt-2 text-sm leading-relaxed">
+            Este producto ya no está a la venta. Si lo compraste, tu garantía
+            sigue igual. Escríbenos y te decimos si vuelve a entrar.
+          </p>
+        </div>
+      )}
 
       <TarjetaAsesor nombreProducto={producto.nombre} />
     </div>

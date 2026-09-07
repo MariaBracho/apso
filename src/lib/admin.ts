@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  CAMPOS_PRODUCTO_EN_PEDIDO,
+  type ProductoEnPedido,
+} from "@/lib/producto";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -62,7 +66,11 @@ export type PedidoFila = {
   para_que_lo_usa: string | null;
   total_usd: number;
   creado_en: string;
-  items: Array<{ nombre_producto: string; cantidad: number }>;
+  items: Array<{
+    nombre_producto: string;
+    cantidad: number;
+    producto: ProductoEnPedido;
+  }>;
   /** Milisegundos que lleva esperando. Se calcula aquí y no al renderizar:
    *  el reloj no es puro y no tiene por qué vivir dentro de un componente. */
   esperaMs: number;
@@ -78,7 +86,10 @@ export async function listarPedidos(): Promise<PedidoFila[]> {
     .select(
       `id, numero, cliente_nombre, cliente_whatsapp, estado, para_que_lo_usa,
        total_usd, creado_en,
-       items:pedido_items (nombre_producto, cantidad)`,
+       items:pedido_items (
+         nombre_producto, cantidad,
+         producto:productos (${CAMPOS_PRODUCTO_EN_PEDIDO})
+       )`,
     )
     .order("creado_en", { ascending: true })
     .returns<Omit<PedidoFila, "esperaMs">[]>();
@@ -116,7 +127,7 @@ export type PedidoDetalle = {
     nombre_producto: string;
     cantidad: number;
     precio_usd_unitario: number;
-    producto: { stock: number } | null;
+    producto: (ProductoEnPedido & { stock: number }) | null;
     seriales: Array<{ id: string; serial: string }>;
   }>;
   eventos: Array<{
@@ -138,7 +149,7 @@ export async function obtenerPedido(id: string): Promise<PedidoDetalle | null> {
        total_usd, inventario_descontado, creado_en, confirmado_en, entregado_en,
        items:pedido_items (
          id, nombre_producto, cantidad, precio_usd_unitario,
-         producto:productos (stock),
+         producto:productos (stock, ${CAMPOS_PRODUCTO_EN_PEDIDO}),
          seriales (id, serial)
        ),
        eventos:pedido_eventos (id, descripcion, creado_en)`,

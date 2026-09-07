@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 
 import { BloqueSeriales } from "@/components/admin/bloque-seriales";
 import { ControlEstado } from "@/components/admin/control-estado";
+import { FotoProducto } from "@/components/tienda/foto-producto";
 import { obtenerPedido } from "@/lib/admin";
+import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
@@ -48,6 +50,7 @@ export default async function PaginaPedido({
         <a
           href={enlaceWhatsapp(
             `Hola ${pedido.cliente_nombre}, te escribo por tu pedido ${pedido.numero}.`,
+            pedido.cliente_whatsapp,
           )}
           target="_blank"
           rel="noopener noreferrer"
@@ -121,24 +124,50 @@ function Productos({
       <h2 className="etiqueta text-texto-3 mb-3 text-[10px]">Productos</h2>
 
       <ul className="border-borde-sutil divide-y border-t border-b">
-        {pedido.items.map((item) => (
-          <li key={item.id} className="flex justify-between gap-4 py-3">
-            <div className="min-w-0">
-              <p className="text-texto text-sm">
-                <span className="text-texto-meta">{item.cantidad} ×</span>{" "}
-                {item.nombre_producto}
+        {pedido.items.map((item) => {
+          const foto = fotoPrincipal(item.producto);
+          const ruta = rutaProducto(item.producto);
+
+          return (
+            <li key={item.id} className="flex items-start gap-4 py-3">
+              <div className="w-14 shrink-0">
+                <FotoProducto
+                  url={foto?.url}
+                  alt=""
+                  alto="aspect-square"
+                  etiqueta=""
+                  tamanos="56px"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-texto text-sm">
+                  <span className="text-texto-meta">{item.cantidad} ×</span>{" "}
+                  {item.nombre_producto}
+                </p>
+                <p className="text-texto-meta text-xs">
+                  {item.producto
+                    ? `Quedan ${item.producto.stock} en inventario`
+                    : "El producto ya no está en el catálogo"}
+                </p>
+                {/* Lleva a la ficha aunque esté despublicada: al atender un
+                    reclamo hace falta ver qué se vendió exactamente. */}
+                {ruta && (
+                  <Link
+                    href={ruta}
+                    className="text-cian hover:text-cian/80 mt-1 inline-block text-xs transition-colors"
+                  >
+                    Ver el producto ↗
+                  </Link>
+                )}
+              </div>
+
+              <p className="font-display text-texto shrink-0 text-sm font-semibold">
+                {formatearUsd(Number(item.precio_usd_unitario) * item.cantidad)}
               </p>
-              <p className="text-texto-meta text-xs">
-                {item.producto
-                  ? `Quedan ${item.producto.stock} en inventario`
-                  : "El producto ya no está en el catálogo"}
-              </p>
-            </div>
-            <p className="font-display text-texto shrink-0 text-sm font-semibold">
-              {formatearUsd(Number(item.precio_usd_unitario) * item.cantidad)}
-            </p>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       <div className="mt-3 flex items-baseline justify-between">

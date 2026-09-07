@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { FotoProducto } from "@/components/tienda/foto-producto";
 import { type PedidoFila, listarPedidos } from "@/lib/admin";
+import { fotoPrincipal } from "@/lib/producto";
 import { NOMBRE_ESTADO, type EstadoPedido } from "@/lib/estados";
 import { formatearUsd } from "@/lib/formato";
 
@@ -88,12 +90,29 @@ function Fila({ pedido }: { pedido: PedidoFila }) {
         </div>
       </div>
 
-      <ul className="text-texto-2 mt-3 space-y-0.5 text-xs">
-        {pedido.items.map((item, i) => (
-          <li key={i}>
-            {item.cantidad} × {item.nombre_producto}
-          </li>
-        ))}
+      {/* Solo la foto, sin enlace al producto: la tarjeta entera ya lleva al
+          pedido y un enlace dentro de otro no es HTML válido. El enlace a la
+          ficha está en el detalle, que es adonde lleva este clic. */}
+      <ul className="text-texto-2 mt-3 space-y-2 text-xs">
+        {pedido.items.map((item, i) => {
+          const foto = fotoPrincipal(item.producto);
+          return (
+            <li key={i} className="flex items-center gap-2.5">
+              <span className="w-9 shrink-0">
+                <FotoProducto
+                  url={foto?.url}
+                  alt=""
+                  alto="aspect-square"
+                  etiqueta=""
+                  tamanos="36px"
+                />
+              </span>
+              <span>
+                {item.cantidad} × {item.nombre_producto}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       {/* El uso que indicó el cliente va citado, no resumido: es el dato con
