@@ -100,7 +100,7 @@ export function GestorFotos({
                   alt=""
                   fill
                   sizes="160px"
-                  className="object-cover"
+                  className="object-contain"
                 />
               </div>
 
