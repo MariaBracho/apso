@@ -28,6 +28,7 @@ export type ItemCarrito = {
     dias_encargo: number | null;
     categoria: { slug: string };
     marca: { nombre: string } | null;
+    imagenes: Array<{ url: string; alt: string | null; orden: number }>;
   };
 };
 
@@ -36,7 +37,8 @@ const CAMPOS = `
   producto:productos!inner (
     id, slug, nombre, precio_usd, stock, dias_encargo,
     categoria:categorias!inner (slug),
-    marca:marcas (nombre)
+    marca:marcas (nombre),
+    imagenes:producto_imagenes (url, alt, orden)
   )
 `;
 

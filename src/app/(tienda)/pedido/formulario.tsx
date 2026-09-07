@@ -139,21 +139,41 @@ export function FormularioPedido({
         nota="El WhatsApp es por donde se atiende todo el pedido."
       >
         <div className="space-y-4">
-          <label className="block">
-            <span className="text-texto-2 mb-1.5 block text-sm">Tu nombre</span>
-            <input
-              {...register("cliente_nombre")}
-              autoComplete="name"
-              className={
-                errors.cliente_nombre ? estiloEntradaMal : estiloEntrada
-              }
-            />
-            {errors.cliente_nombre && (
-              <span role="alert" className="text-error mt-1 block text-xs">
-                {errors.cliente_nombre.message}
+          {/* Con sesión el nombre es el de la cuenta y no se edita: el pedido
+              tiene que llamarse igual que quien lo hizo, o el historial deja de
+              cuadrar con la persona. El servidor lo vuelve a leer del perfil,
+              así que cambiarlo desde el navegador tampoco serviría de nada. */}
+          {nombre ? (
+            <div>
+              <span className="text-texto-2 mb-1.5 block text-sm">
+                Tu nombre
               </span>
-            )}
-          </label>
+              <p className="bg-superficie-2 border-borde text-texto-2 rounded-tarjeta border px-3.5 py-2.5 text-sm">
+                {nombre}
+              </p>
+              <span className="text-texto-meta mt-1 block text-xs">
+                Es el de tu cuenta de Google.
+              </span>
+            </div>
+          ) : (
+            <label className="block">
+              <span className="text-texto-2 mb-1.5 block text-sm">
+                Tu nombre
+              </span>
+              <input
+                {...register("cliente_nombre")}
+                autoComplete="name"
+                className={
+                  errors.cliente_nombre ? estiloEntradaMal : estiloEntrada
+                }
+              />
+              {errors.cliente_nombre && (
+                <span role="alert" className="text-error mt-1 block text-xs">
+                  {errors.cliente_nombre.message}
+                </span>
+              )}
+            </label>
+          )}
 
           <label className="block">
             <span className="text-texto-2 mb-1.5 block text-sm">

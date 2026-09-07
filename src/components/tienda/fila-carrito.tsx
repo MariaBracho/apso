@@ -29,6 +29,7 @@ export function FilaCarrito({
   // El de pagar en bolívares, igual que en el catálogo y la ficha. El de
   // divisas se ofrece en el resumen del pedido, cuando ya se eligió cómo pagar.
   const total = preciosDe(producto.precio_usd, recargo).bolivares * item.cantidad;
+  const foto = [...producto.imagenes].sort((a, b) => a.orden - b.orden)[0];
   // Sin stock no se bloquea el carrito: se puede pedir por encargo. El tope
   // solo aplica a lo que hay en existencia.
   const tope = producto.stock > 0 ? producto.stock : item.cantidad;
@@ -40,7 +41,13 @@ export function FilaCarrito({
       }`}
     >
       <div className="w-20 shrink-0">
-        <FotoProducto alto="aspect-square" />
+        <FotoProducto
+          url={foto?.url}
+          alt={foto?.alt ?? producto.nombre}
+          alto="aspect-square"
+          etiqueta=""
+          tamanos="80px"
+        />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -76,14 +83,17 @@ export function FilaCarrito({
 
         <div className="mt-3 flex items-center gap-4">
           <div className="border-borde rounded-pildora flex items-center border">
+            {/* En 1 se apaga: bajar de ahí borraba la línea entera, que es lo
+                que hace «Quitar» ahí al lado. Dos botones distintos no deberían
+                terminar en lo mismo sin avisar. */}
             <button
               type="button"
-              disabled={pendiente}
+              disabled={pendiente || item.cantidad <= 1}
               onClick={() =>
                 iniciar(() => cambiarCantidad(item.id, item.cantidad - 1))
               }
               aria-label={`Quitar uno de ${producto.nombre}`}
-              className="text-texto-2 hover:text-texto px-3 py-1.5 leading-none transition-colors disabled:opacity-30"
+              className="text-texto-2 hover:text-texto px-3 py-1.5 leading-none transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             >
               −
             </button>

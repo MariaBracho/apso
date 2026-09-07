@@ -87,7 +87,11 @@ export async function enviarPedido(
     .from("pedidos")
     .insert({
       perfil_id: sesion?.id ?? null,
-      cliente_nombre: pedido.cliente_nombre,
+      // Con cuenta manda el nombre del perfil, no el que venga del formulario:
+      // un pedido tiene que llamarse igual que quien lo hizo. El formulario ya
+      // lo muestra fijo, pero un server action se puede llamar sin pasar por
+      // él, y esta es la comprobación que de verdad protege.
+      cliente_nombre: sesion?.nombre ?? pedido.cliente_nombre,
       cliente_whatsapp: `+58${pedido.whatsapp}`,
       cliente_correo: pedido.cliente_correo,
       entrega: pedido.entrega,

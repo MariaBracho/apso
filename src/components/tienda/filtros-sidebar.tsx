@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useOptimistic,
+  useState,
+  useTransition,
+} from "react";
 
 import { formatearUsd } from "@/lib/formato";
 
@@ -32,7 +38,25 @@ export function FiltrosSidebar({
   precioMaximo: number;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
+  const urlReal = useSearchParams();
+  const [, iniciar] = useTransition();
+
+  /**
+   * Los filtros se marcan al instante, sin esperar al servidor.
+   *
+   * Las casillas leen su estado de la URL, y cambiar la URL obliga a
+   * re-renderizar el catálogo entero en el servidor. Sin esto, marcar una
+   * casilla no se veía hasta que ese viaje volvía: segundos de pantalla sin
+   * responder que se sienten como un clic perdido.
+   *
+   * `useOptimistic` adelanta el estado y lo revierte solo si la navegación
+   * falla, así que no se puede quedar mostrando un filtro que no se aplicó.
+   */
+  const [urlOptimista, adelantar] = useOptimistic(urlReal.toString());
+  const params = useMemo(
+    () => new URLSearchParams(urlOptimista),
+    [urlOptimista],
+  );
 
   const actualizar = useCallback(
     (cambios: Record<string, string | null>) => {
@@ -44,9 +68,14 @@ export function FiltrosSidebar({
           siguientes.set(clave, valor);
         }
       }
-      router.replace(`?${siguientes.toString()}`, { scroll: false });
+
+      const cadena = siguientes.toString();
+      iniciar(() => {
+        adelantar(cadena);
+        router.replace(`?${cadena}`, { scroll: false });
+      });
     },
-    [params, router],
+    [params, router, adelantar],
   );
 
   const alternar = (clave: string, valor: string) => {
