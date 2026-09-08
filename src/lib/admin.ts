@@ -155,6 +155,7 @@ export type PedidoDetalle = {
   plazo_encargo_dias: number | null;
   entrega: string;
   ciudad_destino: string | null;
+  estado_destino: string | null;
   metodo_pago: string | null;
   para_que_lo_usa: string | null;
   motivo_cancelacion: string | null;
@@ -187,7 +188,7 @@ export async function obtenerPedido(id: string): Promise<PedidoDetalle | null> {
     .from("pedidos")
     .select(
       `id, numero, cliente_nombre, cliente_whatsapp, cliente_correo, estado,
-       es_encargo, plazo_encargo_dias, entrega, ciudad_destino, metodo_pago,
+       es_encargo, plazo_encargo_dias, entrega, ciudad_destino, estado_destino, metodo_pago,
        para_que_lo_usa, motivo_cancelacion, tasa_cambio, subtotal_usd,
        total_usd, inventario_descontado, creado_en, confirmado_en, entregado_en,
        items:pedido_items (

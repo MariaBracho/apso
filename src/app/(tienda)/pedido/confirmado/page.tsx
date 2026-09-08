@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { BotonWhatsapp } from "@/components/tienda/boton-whatsapp";
-import { COOKIE_PEDIDO, NOMBRE_PAGO } from "@/lib/pedido";
+import { COOKIE_PEDIDO, NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 
@@ -23,7 +23,7 @@ export default async function PaginaConfirmado() {
   const { data: pedido } = await supabase
     .from("pedidos")
     .select(
-      `numero, cliente_nombre, entrega, ciudad_destino, metodo_pago,
+      `numero, cliente_nombre, entrega, ciudad_destino, estado_destino, metodo_pago,
        para_que_lo_usa, tasa_cambio, total_usd, es_encargo, plazo_encargo_dias,
        items:pedido_items (nombre_producto, cantidad, precio_usd_unitario)`,
     )
@@ -106,6 +106,7 @@ function armarMensaje({
     cliente_nombre: string;
     entrega: string;
     ciudad_destino: string | null;
+    estado_destino: string | null;
     metodo_pago: string | null;
     para_que_lo_usa: string | null;
   };
@@ -133,9 +134,7 @@ function armarMensaje({
     "",
     `Total: ${formatearUsd(totalUsd)} · ${formatearBs(totalUsd, tasa)}`,
     `Tasa usada: Bs ${tasa.toLocaleString("es-VE", { minimumFractionDigits: 2 })} / $`,
-    pedido.entrega === "punto_fijo"
-      ? "Entrega: en Punto Fijo"
-      : `Envío: a ${pedido.ciudad_destino}`,
+    `Entrega: ${destinoDe(pedido)}`,
     `Pago: ${NOMBRE_PAGO[pedido.metodo_pago ?? ""] ?? "por acordar"}`,
   );
 

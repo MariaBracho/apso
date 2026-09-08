@@ -10,7 +10,7 @@ import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
-import { NOMBRE_PAGO } from "@/lib/pedido";
+import { NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
 
 export const metadata: Metadata = { title: "Detalle del pedido" };
 
@@ -197,14 +197,7 @@ function Cliente({
         {pedido.cliente_correo && (
           <Dato termino="Correo" valor={pedido.cliente_correo} />
         )}
-        <Dato
-          termino="Entrega"
-          valor={
-            pedido.entrega === "punto_fijo"
-              ? "En Punto Fijo"
-              : `Envío a ${pedido.ciudad_destino}`
-          }
-        />
+        <Dato termino="Entrega" valor={destinoDe(pedido)} />
         <Dato
           termino="Pago"
           valor={NOMBRE_PAGO[pedido.metodo_pago ?? ""] ?? "Por acordar"}

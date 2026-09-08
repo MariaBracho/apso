@@ -18,7 +18,7 @@ import {
   validar,
 } from "@/lib/esquemas";
 import { avisarPedidoNuevo } from "@/lib/correo";
-import { COOKIE_PEDIDO, NOMBRE_ENTREGA, NOMBRE_PAGO } from "@/lib/pedido";
+import { COOKIE_PEDIDO, NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
 import { crearClienteServicio } from "@/lib/supabase/servicio";
 
@@ -131,6 +131,7 @@ export async function enviarPedido(
       cliente_whatsapp: contacto.whatsapp,
       cliente_correo: contacto.correo,
       entrega: pedido.entrega,
+      estado_destino: pedido.estado_destino,
       ciudad_destino: pedido.ciudad_destino,
       metodo_pago: pedido.metodo_pago,
       para_que_lo_usa: pedido.para_que_lo_usa,
@@ -183,8 +184,7 @@ export async function enviarPedido(
       clienteNombre: contacto.nombre,
       clienteWhatsapp: contacto.whatsapp,
       clienteCorreo: contacto.correo,
-      entrega: NOMBRE_ENTREGA[pedido.entrega] ?? pedido.entrega,
-      ciudadDestino: pedido.ciudad_destino,
+      destino: destinoDe({ ...pedido, entrega: pedido.entrega }),
       metodoPago: NOMBRE_PAGO[pedido.metodo_pago] ?? pedido.metodo_pago,
       paraQueLoUsa: pedido.para_que_lo_usa,
       totalUsd: subtotalUsd,

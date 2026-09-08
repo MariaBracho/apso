@@ -21,7 +21,22 @@ export const NOMBRE_PAGO: Record<string, string> = {
   tarjeta_internacional: "Tarjeta internacional",
 };
 
-export const NOMBRE_ENTREGA: Record<string, string> = {
-  punto_fijo: "En Punto Fijo",
-  envio_nacional: "Envío nacional",
-};
+/**
+ * A dónde va el pedido, en una línea.
+ *
+ * Se dice ciudad y estado, no solo la ciudad: hay Santa Ana en cuatro estados
+ * distintos, y quien despacha la encomienda necesita los dos. Vive aquí porque
+ * lo leen el panel, la confirmación y el correo, y tenían que decir lo mismo.
+ */
+export function destinoDe(pedido: {
+  entrega: string;
+  ciudad_destino: string | null;
+  estado_destino: string | null;
+}): string {
+  if (pedido.entrega === "punto_fijo") return "en Punto Fijo";
+  if (!pedido.ciudad_destino) return "envío nacional";
+
+  return pedido.estado_destino
+    ? `envío a ${pedido.ciudad_destino}, ${pedido.estado_destino}`
+    : `envío a ${pedido.ciudad_destino}`;
+}

@@ -493,6 +493,7 @@ export type Database = {
           entregado_en: string | null
           es_encargo: boolean
           estado: Database["public"]["Enums"]["estado_pedido"]
+          estado_destino: string | null
           flete_usd: number
           id: string
           inventario_descontado: boolean
@@ -521,6 +522,7 @@ export type Database = {
           entregado_en?: string | null
           es_encargo?: boolean
           estado?: Database["public"]["Enums"]["estado_pedido"]
+          estado_destino?: string | null
           flete_usd?: number
           id?: string
           inventario_descontado?: boolean
@@ -549,6 +551,7 @@ export type Database = {
           entregado_en?: string | null
           es_encargo?: boolean
           estado?: Database["public"]["Enums"]["estado_pedido"]
+          estado_destino?: string | null
           flete_usd?: number
           id?: string
           inventario_descontado?: boolean

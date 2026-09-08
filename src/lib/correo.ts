@@ -36,8 +36,9 @@ export type ResumenPedido = {
   clienteNombre: string;
   clienteWhatsapp: string;
   clienteCorreo: string | null;
-  entrega: string;
-  ciudadDestino: string | null;
+  /** Ya formateado por `destinoDe`. */
+  destino: string;
+
   metodoPago: string;
   paraQueLoUsa: string | null;
   totalUsd: number;
@@ -119,7 +120,7 @@ function enTextoPlano(p: ResumenPedido): string {
     "",
     `Total: ${formatearUsd(p.totalUsd)} · ${formatearBs(p.totalUsd, p.tasa)}`,
     `Pago: ${p.metodoPago}`,
-    `Entrega: ${p.entrega}${p.ciudadDestino ? ` — ${p.ciudadDestino}` : ""}`,
+    `Entrega: ${p.destino}`,
     p.paraQueLoUsa ? `\nLo quiere para: «${p.paraQueLoUsa}»` : null,
     "",
     `Atenderlo: ${SITIO}/admin/pedidos`,
@@ -159,7 +160,7 @@ function enHtml(p: ResumenPedido): string {
     <tr><td style="color:#6b6478;padding:2px 0;">WhatsApp</td><td style="text-align:right;">${escapar(p.clienteWhatsapp)}</td></tr>
     ${p.clienteCorreo ? `<tr><td style="color:#6b6478;padding:2px 0;">Correo</td><td style="text-align:right;">${escapar(p.clienteCorreo)}</td></tr>` : ""}
     <tr><td style="color:#6b6478;padding:2px 0;">Pago</td><td style="text-align:right;">${escapar(p.metodoPago)}</td></tr>
-    <tr><td style="color:#6b6478;padding:2px 0;">Entrega</td><td style="text-align:right;">${escapar(p.entrega)}${p.ciudadDestino ? ` — ${escapar(p.ciudadDestino)}` : ""}</td></tr>
+    <tr><td style="color:#6b6478;padding:2px 0;">Entrega</td><td style="text-align:right;">${escapar(p.destino)}</td></tr>
   </table>
 
   <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:20px;border-top:1px solid #ddd;">

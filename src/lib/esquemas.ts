@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 import { CONDICIONES, RESPALDOS } from "@/lib/producto";
+import { ESTADOS, esDestinoValido } from "@/lib/venezuela";
 
 /**
  * Esquemas de validación, compartidos entre el formulario y el server action.
@@ -277,6 +278,25 @@ export const esquemaPedido = yup.object({
     .string()
     .oneOf(["punto_fijo", "envio_nacional"] as const)
     .required(),
+  // Estado y ciudad de la lista, no texto libre: «mcbo» y «Maracaibo» eran dos
+  // destinos distintos para la base, y ninguno decía el estado, que es lo que
+  // pide la encomienda para cotizar.
+  estado_destino: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .when("entrega", {
+      is: "envio_nacional",
+      then: (esquema) =>
+        esquema
+          .required("Elige el estado.")
+          .oneOf(
+            ESTADOS.map((e) => e.nombre),
+            "Ese estado no está en la lista.",
+          ),
+    }),
   ciudad_destino: yup
     .string()
     .trim()
@@ -285,7 +305,16 @@ export const esquemaPedido = yup.object({
     .defined()
     .when("entrega", {
       is: "envio_nacional",
-      then: (esquema) => esquema.required("Dinos a qué ciudad enviamos."),
+      then: (esquema) =>
+        esquema.required("Elige la ciudad.").test(
+          "ciudad-del-estado",
+          "Esa ciudad no es de ese estado.",
+          // Se comprueba el par y no cada uno por su lado: los dos llegan del
+          // navegador, y «Zulia + Punto Fijo» manda la encomienda a ninguna
+          // parte aunque las dos existan.
+          (ciudad, ctx) =>
+            !ciudad || esDestinoValido(ctx.parent.estado_destino ?? "", ciudad),
+        ),
     }),
 
   metodo_pago: yup

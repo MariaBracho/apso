@@ -114,6 +114,78 @@ test.describe("Pedido", () => {
   });
 });
 
+test.describe("Destino de un envío", () => {
+  /**
+   * Estado y ciudad de una lista, no texto libre.
+   *
+   * Antes se escribía la ciudad a mano y «mcbo», «Maracaibo» y «maracaibo
+   * zulia» eran tres destinos distintos, ninguno con el estado, que es lo que
+   * pide la encomienda para cotizar.
+   */
+  test("la ciudad se filtra por el estado elegido", async ({ page }) => {
+    await agregarAlCarrito(page, SLUG);
+    await page.goto("/pedido");
+
+    // El destino solo aparece si se envía; en Punto Fijo no hay a dónde.
+    await expect(page.getByLabel("¿A qué estado?")).toHaveCount(0);
+    await page.locator("label").filter({ hasText: "Envío nacional" }).click();
+
+    const estado = page.getByLabel("¿A qué estado?");
+    const ciudad = page.getByLabel("¿A qué ciudad?");
+
+    // Sin estado no se puede elegir ciudad: son 480 y la mitad no serían del
+    // sitio al que se envía.
+    await expect(ciudad).toBeDisabled();
+
+    await estado.selectOption("Falcón");
+    await expect(ciudad).toBeEnabled();
+    await expect(ciudad.locator("option", { hasText: "Punto Fijo" })).toHaveCount(1);
+    await expect(ciudad.locator("option", { hasText: "Maracaibo" })).toHaveCount(0);
+
+    await ciudad.selectOption("Punto Fijo");
+
+    // Y al cambiar de estado la ciudad de antes se limpia sola: dejarla sería
+    // un par imposible que solo se descubriría al enviar.
+    await estado.selectOption("Zulia");
+    await expect(ciudad).toHaveValue("");
+    await expect(ciudad.locator("option", { hasText: "Maracaibo" })).toHaveCount(1);
+  });
+
+  test("el envío guarda estado y ciudad, y se leen juntos", async ({ page }) => {
+    await agregarAlCarrito(page, SLUG);
+    await page.goto("/pedido");
+
+    await page.getByLabel("Tu nombre").fill("Prueba Automática");
+    await page.getByLabel("Tu WhatsApp").fill("4141112233");
+    await page.locator("label").filter({ hasText: "Envío nacional" }).click();
+    await page.getByLabel("¿A qué estado?").selectOption("Zulia");
+    await page.getByLabel("¿A qué ciudad?").selectOption("Maracaibo");
+
+    await page.getByRole("button", { name: "Enviar mi pedido" }).click();
+    await page.waitForURL("**/pedido/confirmado");
+
+    const titulo = await page.getByRole("heading", { level: 1 }).textContent();
+    const numero = titulo!.match(/A-\d+/)![0];
+
+    try {
+      // El mensaje de WhatsApp dice los dos: hay Santa Ana en cuatro estados.
+      await expect(page.getByText("Entrega: envío a Maracaibo, Zulia")).toBeVisible();
+
+      const { data } = await db
+        .from("pedidos")
+        .select("entrega, estado_destino, ciudad_destino")
+        .eq("numero", numero)
+        .single();
+
+      expect(data!.entrega).toBe("envio_nacional");
+      expect(data!.estado_destino).toBe("Zulia");
+      expect(data!.ciudad_destino).toBe("Maracaibo");
+    } finally {
+      await borrarPedido(numero);
+    }
+  });
+});
+
 test.describe("Pedido con cuenta", () => {
   /**
    * Quien tiene sesión no vuelve a escribir su contacto.

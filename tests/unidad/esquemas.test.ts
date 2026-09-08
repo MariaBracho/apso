@@ -102,6 +102,7 @@ describe("esquemaPedido · WhatsApp", () => {
     whatsapp: "4246056110",
     cliente_correo: null,
     entrega: "punto_fijo",
+    estado_destino: null,
     ciudad_destino: null,
     metodo_pago: "pago_movil",
     para_que_lo_usa: null,
@@ -119,20 +120,44 @@ describe("esquemaPedido · WhatsApp", () => {
     }
   });
 
-  it("exige ciudad cuando la entrega es un envío nacional", async () => {
-    const sinCiudad = await validar(esquemaPedido, {
-      ...BASE,
-      entrega: "envio_nacional",
-      ciudad_destino: null,
-    });
-    expect(sinCiudad.ok).toBe(false);
+  it("un envío nacional exige estado y ciudad, y que la ciudad sea de ese estado", async () => {
+    const envio = { ...BASE, entrega: "envio_nacional" };
 
-    const conCiudad = await validar(esquemaPedido, {
-      ...BASE,
-      entrega: "envio_nacional",
-      ciudad_destino: "Maracaibo",
+    // Sin destino no se puede despachar nada.
+    expect((await validar(esquemaPedido, envio)).ok).toBe(false);
+    expect(
+      (await validar(esquemaPedido, { ...envio, estado_destino: "Zulia" })).ok,
+    ).toBe(false);
+
+    // El par tiene que existir: las dos son reales, pero Punto Fijo no es del
+    // Zulia, y una encomienda a ese destino no llega a ninguna parte.
+    expect(
+      (
+        await validar(esquemaPedido, {
+          ...envio,
+          estado_destino: "Zulia",
+          ciudad_destino: "Punto Fijo",
+        })
+      ).ok,
+    ).toBe(false);
+
+    // Y un estado que no existe tampoco pasa, aunque venga con una ciudad.
+    expect(
+      (
+        await validar(esquemaPedido, {
+          ...envio,
+          estado_destino: "Vargas",
+          ciudad_destino: "La Guaira",
+        })
+      ).ok,
+    ).toBe(false);
+
+    const bueno = await validar(esquemaPedido, {
+      ...envio,
+      estado_destino: "Falcón",
+      ciudad_destino: "Punto Fijo",
     });
-    expect(conCiudad.ok).toBe(true);
+    expect(bueno.ok).toBe(true);
   });
 });
 

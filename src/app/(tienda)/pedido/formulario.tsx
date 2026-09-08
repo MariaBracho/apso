@@ -13,6 +13,7 @@ import {
   estiloEntradaMal,
 } from "@/components/formulario/campos";
 import { type DatosPedido, esquemaPedido } from "@/lib/esquemas";
+import { ESTADOS, ciudadesDe } from "@/lib/venezuela";
 
 /** Lo que la tienda ya sabe de quien tiene sesión abierta. */
 export type Cuenta = {
@@ -43,6 +44,7 @@ export function FormularioPedido({ cuenta }: { cuenta: Cuenta | null }) {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<DatosPedido>({
@@ -55,6 +57,7 @@ export function FormularioPedido({ cuenta }: { cuenta: Cuenta | null }) {
       whatsapp: cuenta?.whatsapp?.replace(/^\+58/, "") ?? "",
       cliente_correo: cuenta?.correo ?? null,
       entrega: "punto_fijo",
+      estado_destino: null,
       ciudad_destino: null,
       metodo_pago: "pago_movil",
       para_que_lo_usa: null,
@@ -64,7 +67,10 @@ export function FormularioPedido({ cuenta }: { cuenta: Cuenta | null }) {
 
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const entrega = useWatch({ control, name: "entrega" });
+  const estado = useWatch({ control, name: "estado_destino" });
   const faltaElNumero = cuenta !== null && cuenta.whatsapp === null;
+
+  const ciudades = ciudadesDe(estado ?? "");
 
   const enviar = handleSubmit(
     async (datos) => {
@@ -109,23 +115,66 @@ export function FormularioPedido({ cuenta }: { cuenta: Cuenta | null }) {
         </div>
 
         {entrega === "envio_nacional" && (
-          <label className="mt-4 block">
-            <span className="text-texto-2 mb-1.5 block text-sm">
-              ¿A qué ciudad?
-            </span>
-            <input
-              {...register("ciudad_destino")}
-              placeholder="Maracaibo"
-              className={
-                errors.ciudad_destino ? estiloEntradaMal : estiloEntrada
-              }
-            />
-            {errors.ciudad_destino && (
-              <span role="alert" className="text-error mt-1 block text-xs">
-                {errors.ciudad_destino.message}
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-texto-2 mb-1.5 block text-sm">
+                ¿A qué estado?
               </span>
-            )}
-          </label>
+              <select
+                {...register("estado_destino", {
+                  // Al cambiar de estado la ciudad de antes ya no es de aquí.
+                  // Se limpia sola en vez de dejar un par imposible que solo
+                  // se descubriría al enviar.
+                  onChange: () => setValue("ciudad_destino", null),
+                })}
+                className={
+                  errors.estado_destino ? estiloEntradaMal : estiloEntrada
+                }
+              >
+                <option value="">Elige el estado</option>
+                {ESTADOS.map((e) => (
+                  <option key={e.nombre} value={e.nombre}>
+                    {e.nombre}
+                  </option>
+                ))}
+              </select>
+              {errors.estado_destino && (
+                <span role="alert" className="text-error mt-1 block text-xs">
+                  {errors.estado_destino.message}
+                </span>
+              )}
+            </label>
+
+            <label className="block">
+              <span className="text-texto-2 mb-1.5 block text-sm">
+                ¿A qué ciudad?
+              </span>
+              {/* Apagado hasta que haya estado: una lista de 480 ciudades sin
+                  filtrar no se puede recorrer, y la mitad no serían del sitio
+                  al que se envía. */}
+              <select
+                {...register("ciudad_destino")}
+                disabled={ciudades.length === 0}
+                className={`${errors.ciudad_destino ? estiloEntradaMal : estiloEntrada} disabled:opacity-40`}
+              >
+                <option value="">
+                  {ciudades.length === 0
+                    ? "Elige el estado primero"
+                    : "Elige la ciudad"}
+                </option>
+                {ciudades.map((ciudad) => (
+                  <option key={ciudad} value={ciudad}>
+                    {ciudad}
+                  </option>
+                ))}
+              </select>
+              {errors.ciudad_destino && (
+                <span role="alert" className="text-error mt-1 block text-xs">
+                  {errors.ciudad_destino.message}
+                </span>
+              )}
+            </label>
+          </div>
         )}
       </Seccion>
 
