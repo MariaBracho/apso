@@ -22,7 +22,7 @@ export * from "@/lib/producto";
  */
 
 const CAMPOS_LISTADO = `
-  id, slug, nombre, resumen, precio_usd, precio_referencia_usd,
+  id, slug, nombre, resumen, precio_usd,
   stock, dias_encargo, condicion,
   categoria:categorias!inner (slug, nombre),
   marca:marcas (slug, nombre),
@@ -31,7 +31,7 @@ const CAMPOS_LISTADO = `
 
 const CAMPOS_FICHA = `
   id, slug, nombre, resumen, descripcion, especificaciones,
-  precio_usd, precio_referencia_usd, stock, dias_encargo,
+  precio_usd, stock, dias_encargo,
   condicion, procedencia, garantia_meses, garantia_vitalicia,
   categoria:categorias!inner (slug, nombre),
   marca:marcas (slug, nombre),
@@ -68,16 +68,35 @@ function avisarFallo(donde: string, error: { message: string } | null) {
  * un problema de la tienda. Suponer que hay recargo cuando no se sabe cobraría
  * de más, que es un problema del cliente.
  */
-export async function obtenerRecargo(): Promise<number> {
+export type Ajustes = {
+  /** Porcentaje que se le suma al precio en divisas para el de bolívares. */
+  recargo: number;
+  /**
+   * Si el catálogo y la ficha anuncian el precio pagando en dólares.
+   *
+   * Es solo de presentación. Lo que se cobra no depende de esto: quien paga en
+   * divisas paga el precio en divisas igual, y el carrito y el pedido lo
+   * muestran siempre porque ahí ya se eligió el método.
+   */
+  mostrarDivisa: boolean;
+};
+
+export async function obtenerAjustes(): Promise<Ajustes> {
   const supabase = await crearClienteServidor();
 
   const { data, error } = await supabase
     .from("ajustes")
-    .select("recargo_bs_pct")
+    .select("recargo_bs_pct, mostrar_precio_divisa")
     .maybeSingle();
 
-  avisarFallo("recargo en bolívares", error);
-  return Number(data?.recargo_bs_pct ?? 0);
+  avisarFallo("ajustes de la tienda", error);
+
+  return {
+    recargo: Number(data?.recargo_bs_pct ?? 0),
+    // Sin fila, sin anuncio: es preferible no prometer un descuento a
+    // prometerlo por un fallo de lectura.
+    mostrarDivisa: data?.mostrar_precio_divisa ?? false,
+  };
 }
 
 export async function obtenerTasaVigente(): Promise<number | null> {

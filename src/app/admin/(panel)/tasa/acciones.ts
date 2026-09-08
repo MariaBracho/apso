@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import {
-  type DatosRecargo,
+  type DatosPrecios,
   type DatosTasa,
-  esquemaRecargo,
+  esquemaPrecios,
   esquemaTasa,
   validar,
 } from "@/lib/esquemas";
@@ -42,16 +42,19 @@ export async function fijarTasa(datos: DatosTasa): Promise<EstadoTasa> {
 }
 
 /**
- * Cambia el recargo por pagar en bolívares.
+ * Cambia el recargo y si el precio en divisas se anuncia.
  *
- * Mueve el precio en bolívares de todo el catálogo de inmediato. El precio en
- * divisas no se toca — ese es el que está cargado en cada producto. Los pedidos
- * ya hechos tampoco: cada uno congeló sus precios al enviarse.
+ * El recargo mueve el precio en bolívares de todo el catálogo de inmediato. El
+ * precio en divisas no se toca — ese es el que está cargado en cada producto.
+ * Los pedidos ya hechos tampoco: cada uno congeló sus precios al enviarse.
+ *
+ * El interruptor es solo de presentación: apagado, el catálogo y la ficha no
+ * anuncian el precio en dólares, pero quien pague en divisas lo paga igual.
  */
-export async function fijarRecargo(datos: DatosRecargo): Promise<EstadoTasa> {
+export async function fijarPrecios(datos: DatosPrecios): Promise<EstadoTasa> {
   const sesion = await exigirAdmin();
 
-  const resultado = await validar(esquemaRecargo, datos);
+  const resultado = await validar(esquemaPrecios, datos);
   if (!resultado.ok) return { error: resultado.error };
 
   const supabase = await crearClienteServidor();
@@ -59,6 +62,7 @@ export async function fijarRecargo(datos: DatosRecargo): Promise<EstadoTasa> {
     .from("ajustes")
     .update({
       recargo_bs_pct: resultado.valores.recargo_bs_pct,
+      mostrar_precio_divisa: resultado.valores.mostrar_precio_divisa,
       actualizado_en: new Date().toISOString(),
       actualizado_por: sesion.id,
     })

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { FilaCarrito } from "@/components/tienda/fila-carrito";
 import { VaciarCarrito } from "@/components/tienda/vaciar-carrito";
-import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 import { preciosDe } from "@/lib/precio";
@@ -11,10 +11,10 @@ import { preciosDe } from "@/lib/precio";
 export const metadata: Metadata = { title: "Tu carrito" };
 
 export default async function PaginaCarrito() {
-  const [items, tasa, recargo] = await Promise.all([
+  const [items, tasa, { recargo }] = await Promise.all([
     leerCarrito(),
     obtenerTasaVigente(),
-    obtenerRecargo(),
+    obtenerAjustes(),
   ]);
   const resumen = resumir(items);
   const total = preciosDe(resumen.subtotalUsd, recargo);

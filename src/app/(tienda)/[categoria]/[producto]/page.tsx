@@ -12,11 +12,11 @@ import {
   obtenerCategoriaPorSlug,
   obtenerProductoOculto,
   obtenerProductoPorSlug,
-  obtenerRecargo,
+  obtenerAjustes,
   obtenerTasaVigente,
 } from "@/lib/catalogo";
 import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
-import { calcularAhorro, formatearBs, formatearUsd } from "@/lib/formato";
+import { formatearBs, formatearUsd } from "@/lib/formato";
 import { type Precios, preciosDe } from "@/lib/precio";
 import { NOMBRE_CONDICION } from "@/lib/producto";
 
@@ -54,10 +54,10 @@ export default async function PaginaProducto({
 
   const disponible = publicado !== null;
 
-  const [categoria, tasa, recargo] = await Promise.all([
+  const [categoria, tasa, ajustes] = await Promise.all([
     obtenerCategoriaPorSlug(producto.categoria.slug),
     obtenerTasaVigente(),
-    obtenerRecargo(),
+    obtenerAjustes(),
   ]);
 
   const padre = categoria?.padre_id
@@ -71,13 +71,14 @@ export default async function PaginaProducto({
       <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_400px]">
         <Galeria producto={producto} disponible={disponible} />
 
-        {/* La columna de decisión se queda fija: precio, ahorro y con quién
-            hablar siguen a la vista mientras se leen las especificaciones. */}
+        {/* La columna de decisión se queda fija: precio y con quién hablar
+            siguen a la vista mientras se leen las especificaciones. */}
         <div className="lg:sticky lg:top-24 lg:self-start">
           <PanelCompra
             producto={producto}
             tasa={tasa}
-            recargo={recargo}
+            recargo={ajustes.recargo}
+            mostrarDivisa={ajustes.mostrarDivisa}
             disponible={disponible}
           />
         </div>
@@ -228,19 +229,18 @@ function PanelCompra({
   producto,
   tasa,
   recargo,
+  mostrarDivisa,
   disponible,
 }: {
   producto: ProductoFicha;
   tasa: number | null;
   recargo: number;
+  /** Si la tienda está anunciando el precio pagando en dólares. */
+  mostrarDivisa: boolean;
   /** Falso cuando el producto ya no está publicado. */
   disponible: boolean;
 }) {
   const precios = preciosDe(producto.precio_usd, recargo);
-  const ahorro = calcularAhorro(
-    precios.bolivares,
-    producto.precio_referencia_usd,
-  );
 
   return (
     <div className="space-y-6">
@@ -275,14 +275,8 @@ function PanelCompra({
         )}
       </div>
 
-      {disponible && precios.ahorro > 0 && <BloqueDivisas precios={precios} />}
-
-      {disponible && ahorro && (
-        <BloqueAhorro
-          precioReferencia={producto.precio_referencia_usd!}
-          precio={precios.bolivares}
-          ahorro={ahorro.monto}
-        />
+      {disponible && mostrarDivisa && precios.ahorro > 0 && (
+        <BloqueDivisas precios={precios} />
       )}
 
       {/* Despublicado se ve pero no se compra. El botón de comprar algo que la
@@ -336,45 +330,6 @@ function BloqueDivisas({ precios }: { precios: Precios }) {
       <p className="text-texto-meta mt-2 text-xs leading-relaxed">
         En efectivo, Zelle, Binance o tarjeta. El precio de arriba es pagando en
         bolívares.
-      </p>
-    </div>
-  );
-}
-
-/**
- * El bloque de ahorro: la diferencia es la comisión que aquí no se paga.
- * Se explica el porqué en vez de gritar un descuento — la promesa de marca es
- * decir lo que cuesta de verdad.
- */
-function BloqueAhorro({
-  precioReferencia,
-  precio,
-  ahorro,
-}: {
-  precioReferencia: number;
-  precio: number;
-  ahorro: number;
-}) {
-  return (
-    <div className="bg-superficie-alta rounded-tarjeta p-4">
-      <div className="flex items-baseline justify-between text-sm">
-        <span className="text-texto-3">Con comisión de plataforma</span>
-        <span className="text-texto-meta line-through">
-          {formatearUsd(precioReferencia)}
-        </span>
-      </div>
-      <div className="mt-2 flex items-baseline justify-between text-sm">
-        <span className="text-texto">Comprando aquí</span>
-        <span className="font-display text-texto font-semibold">
-          {formatearUsd(precio)}
-        </span>
-      </div>
-
-      <p className="border-borde text-exito mt-3 border-t pt-3 text-sm font-medium">
-        Aquí ahorras {formatearUsd(ahorro)}
-      </p>
-      <p className="text-texto-meta mt-1 text-xs leading-relaxed">
-        Es el mismo producto. La diferencia es la comisión que aquí no pagas.
       </p>
     </div>
   );

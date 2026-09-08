@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calcularAhorro, formatearBs, formatearTasa, formatearUsd } from "@/lib/formato";
+import { formatearBs, formatearTasa, formatearUsd } from "@/lib/formato";
 
 describe("formatearUsd", () => {
   it("sin céntimos cuando el monto es redondo", () => {
@@ -27,21 +27,5 @@ describe("formatearBs", () => {
 describe("formatearTasa", () => {
   it("nombra la unidad para que se entienda qué es", () => {
     expect(formatearTasa(807.39)).toBe("Bs 807,39 / $");
-  });
-});
-
-describe("calcularAhorro", () => {
-  it("calcula el monto y el porcentaje contra el precio de referencia", () => {
-    const ahorro = calcularAhorro(120, 138);
-    expect(ahorro?.monto).toBe(18);
-    expect(ahorro?.porcentaje).toBe(13);
-  });
-
-  it("devuelve null cuando no hay comparación honesta que hacer", () => {
-    // Sin referencia no se inventa un ahorro.
-    expect(calcularAhorro(120, null)).toBeNull();
-    // Y si la referencia no es mayor, tampoco: sería un descuento falso.
-    expect(calcularAhorro(120, 120)).toBeNull();
-    expect(calcularAhorro(142.8, 138)).toBeNull();
   });
 });

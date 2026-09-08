@@ -8,7 +8,7 @@ import {
   leerCarrito,
   obtenerCarritoActual,
 } from "@/lib/carrito";
-import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { preciosDe, precioSegunPago } from "@/lib/precio";
 import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
 import { avisarPedidoNuevo } from "@/lib/correo";
@@ -58,7 +58,7 @@ export async function enviarPedido(
   // El precio depende de cómo vaya a pagar: en divisas rige el que se carga en
   // el panel, y en bolívares ese mismo más el recargo. Se decide aquí y no en
   // el navegador porque es lo que se le va a cobrar.
-  const recargo = await obtenerRecargo();
+  const { recargo } = await obtenerAjustes();
 
   // Se lee del producto, no del carrito: el carrito guarda el precio de cuando
   // se agregó y el que vale es el de ahora, que es el que se le mostró.

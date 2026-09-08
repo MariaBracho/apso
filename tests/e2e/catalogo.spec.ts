@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  ajustarAjustes,
   ajustarProducto,
   productoPorSlug,
   recargoActual,
@@ -44,11 +45,41 @@ test.describe("Catálogo", () => {
     const panel = page.locator("main");
     await expect(panel).toContainText(formatearUsd(enBolivares));
     await expect(panel).toContainText(formatearBs(bolivares));
+  });
 
-    // Y el de divisas, que es el que se carga en el panel, se ofrece aparte.
-    if (recargo > 0) {
+  /**
+   * El precio en divisas se anuncia solo si la tienda lo enciende.
+   *
+   * Es un interruptor de presentación: apagado no aparece en la tarjeta ni en
+   * la ficha, pero lo que se cobra no cambia — eso lo decide el método de pago
+   * y se comprueba en `pedido.spec.ts`.
+   */
+  test("el precio en divisas se anuncia solo cuando la tienda lo enciende", async ({ page }) => {
+    const producto = await productoPorSlug("corsair-vengeance-32gb-ddr5-6000");
+    const ruta = await rutaDe(producto.slug);
+    const recargo = await recargoActual();
+
+    // Sin recargo los dos precios son el mismo y no hay nada que anunciar.
+    test.skip(recargo === 0, "Hace falta un recargo para que haya dos precios.");
+
+    const restaurar = await ajustarAjustes({ mostrar_precio_divisa: false });
+    try {
+      await page.goto(ruta);
+      await expect(page.getByText("Pagando en dólares")).toHaveCount(0);
+
+      await page.goto("/componentes");
+      await expect(page.getByText(/en divisas/i)).toHaveCount(0);
+
+      await ajustarAjustes({ mostrar_precio_divisa: true });
+
+      await page.goto(ruta);
       await expect(page.getByText("Pagando en dólares")).toBeVisible();
-      await expect(panel).toContainText(formatearUsd(producto.precio_usd));
+      await expect(page.locator("main")).toContainText(formatearUsd(producto.precio_usd));
+
+      await page.goto("/componentes");
+      await expect(page.getByText(/en divisas/i).first()).toBeVisible();
+    } finally {
+      await restaurar();
     }
   });
 

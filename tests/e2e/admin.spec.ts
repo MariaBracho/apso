@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { borrarPedido, db, productoPorSlug } from "./soporte/datos";
+import {
+  ajustarAjustes,
+  borrarPedido,
+  db,
+  productoPorSlug,
+  rutaDe,
+} from "./soporte/datos";
 import { entrarComoAdmin } from "./soporte/sesion";
 
 const SLUG = "corsair-vengeance-32gb-ddr5-6000";
@@ -132,6 +138,42 @@ test.describe("Pedidos", () => {
       await expect(page.getByText(/Ningún pedido coincide/)).toBeVisible();
     } finally {
       await borrarPedido(numero);
+    }
+  });
+});
+
+test.describe("Precios de la tienda", () => {
+  /**
+   * El interruptor decide si la tienda anuncia el precio pagando en dólares.
+   *
+   * Se comprueba de punta a punta —marcar, guardar, mirar la ficha— porque lo
+   * que importa no es que la casilla quede marcada sino que el catálogo le
+   * haga caso.
+   */
+  test("anunciar el precio en divisas se enciende desde el panel", async ({ page }) => {
+    const restaurar = await ajustarAjustes({ mostrar_precio_divisa: false });
+    const ruta = await rutaDe(SLUG);
+
+    try {
+      await page.goto(ruta);
+      await expect(page.getByText("Pagando en dólares")).toHaveCount(0);
+
+      await entrarComoAdmin(page);
+      await page.goto("/admin/tasa");
+
+      const interruptor = page.getByRole("checkbox", {
+        name: /anunciar el precio pagando en dólares/i,
+      });
+      await expect(interruptor).not.toBeChecked();
+
+      await interruptor.check();
+      await page.getByRole("button", { name: /guardar precios/i }).click();
+      await expect(page.getByText(/precios guardados/i)).toBeVisible();
+
+      await page.goto(ruta);
+      await expect(page.getByText("Pagando en dólares")).toBeVisible();
+    } finally {
+      await restaurar();
     }
   });
 });

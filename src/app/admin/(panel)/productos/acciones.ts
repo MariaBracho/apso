@@ -39,7 +39,6 @@ async function preparar(datos: DatosProducto) {
         (e) => e.clave !== "" && e.valor !== "",
       ),
       precio_usd: p.precio_usd,
-      precio_referencia_usd: p.precio_referencia_usd,
       stock: p.stock,
       dias_encargo: p.dias_encargo,
       condicion: p.condicion,

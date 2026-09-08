@@ -103,20 +103,6 @@ export const esquemaProducto = yup.object({
     .required("Hace falta el precio.")
     .positive("El precio tiene que ser mayor que cero."),
 
-  precio_referencia_usd: yup
-    .number()
-    .transform(numeroConComa)
-    .typeError("El precio de referencia tiene que ser un número.")
-    .nullable()
-    .positive("El precio de referencia tiene que ser mayor que cero.")
-    .defined()
-    // Sin ahorro que mostrar, el bloque de comparación mentiría.
-    .test(
-      "mayor-que-el-tuyo",
-      "Tiene que ser mayor que tu precio; si no, no hay ahorro que mostrar.",
-      (valor, ctx) => valor === null || valor === undefined || valor > ctx.parent.precio_usd,
-    ),
-
   stock: yup
     .number()
     .transform(numeroConComa)
@@ -199,7 +185,8 @@ export const esquemaTasa = yup.object({
 
 export type DatosTasa = yup.InferType<typeof esquemaTasa>;
 
-export const esquemaRecargo = yup.object({
+/** Lo que se toca en «Precios de la tienda»: el recargo y cómo se anuncia. */
+export const esquemaPrecios = yup.object({
   recargo_bs_pct: yup
     .number()
     .transform(numeroConComa)
@@ -209,9 +196,13 @@ export const esquemaRecargo = yup.object({
     // El tope está también en la base. Tres dígitos casi siempre es un cero de
     // más, y esto se paga en lo que cobra el cliente.
     .max(100, "Un recargo de más de 100 % no parece intencional. Revísalo."),
+
+  // Solo cambia lo que se anuncia en el catálogo y la ficha. Lo que se cobra
+  // sigue dependiendo del método de pago.
+  mostrar_precio_divisa: yup.boolean().required(),
 });
 
-export type DatosRecargo = yup.InferType<typeof esquemaRecargo>;
+export type DatosPrecios = yup.InferType<typeof esquemaPrecios>;
 
 
 // ---------------------------------------------------------------------------

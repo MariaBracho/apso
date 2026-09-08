@@ -79,3 +79,20 @@ export function ErrorServidor({ mensaje }: { mensaje: string | null }) {
     </p>
   );
 }
+
+/** Casilla con su etiqueta al lado, para los sí/no. */
+export function Interruptor({
+  etiqueta,
+  ...props
+}: { etiqueta: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+      <input
+        type="checkbox"
+        {...props}
+        className="accent-cian h-4 w-4 cursor-pointer"
+      />
+      <span className="text-texto-2">{etiqueta}</span>
+    </label>
+  );
+}

@@ -10,6 +10,7 @@ import type { EstadoProducto } from "@/app/admin/(panel)/productos/acciones";
 import {
   Campo,
   ErrorServidor,
+  Interruptor,
   Seccion,
   estiloEntrada,
   estiloEntradaMal,
@@ -30,7 +31,6 @@ export const PRODUCTO_VACIO: DatosProducto = {
   descripcion: null,
   especificaciones: [{ clave: "", valor: "" }],
   precio_usd: 0,
-  precio_referencia_usd: null,
   stock: 0,
   dias_encargo: null,
   condicion: "nuevo",
@@ -158,7 +158,7 @@ export function FormularioProducto({
         titulo="Precio"
         nota="Se carga el precio pagando en dólares. El de pagar en bolívares se calcula solo sumándole el recargo, y es el que sale grande en la tienda."
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:w-1/2 sm:pr-2">
           <Campo
             etiqueta="Precio en divisas"
             error={errors.precio_usd?.message}
@@ -169,18 +169,6 @@ export function FormularioProducto({
               className={errors.precio_usd ? estiloEntradaMal : estiloEntrada}
             />
             <PrecioEnBolivares control={control} recargo={recargo} />
-          </Campo>
-          <Campo
-            etiqueta="Precio de referencia"
-            error={errors.precio_referencia_usd?.message}
-          >
-            <input
-              {...register("precio_referencia_usd")}
-              inputMode="decimal"
-              className={
-                errors.precio_referencia_usd ? estiloEntradaMal : estiloEntrada
-              }
-            />
           </Campo>
         </div>
       </Seccion>
@@ -391,21 +379,5 @@ function PrecioEnBolivares({
       </span>{" "}
       (+{recargo} %)
     </span>
-  );
-}
-
-function Interruptor({
-  etiqueta,
-  ...props
-}: { etiqueta: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-      <input
-        type="checkbox"
-        {...props}
-        className="accent-cian h-4 w-4 cursor-pointer"
-      />
-      <span className="text-texto-2">{etiqueta}</span>
-    </label>
   );
 }

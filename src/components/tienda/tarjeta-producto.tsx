@@ -15,16 +15,20 @@ import { formatearBs, formatearUsd } from "@/lib/formato";
  *
  * El grande es el de pagar en bolívares porque es el caso común, y es el que
  * multiplicado por la tasa da el monto en bolívares de al lado. El de divisas
- * va debajo como lo que es: más barato por pagar en dólares.
+ * va debajo, como lo que es —más barato por pagar en dólares—, y solo cuando
+ * la tienda lo está anunciando.
  */
 export function TarjetaProducto({
   producto,
   tasa,
   recargo,
+  mostrarDivisa,
 }: {
   producto: ProductoListado;
   tasa: number | null;
   recargo: number;
+  /** Si la tienda está anunciando el precio pagando en dólares. */
+  mostrarDivisa: boolean;
 }) {
   const precios = preciosDe(producto.precio_usd, recargo);
 
@@ -73,7 +77,7 @@ export function TarjetaProducto({
               ? formatearBs(precios.bolivares, tasa)
               : "Tasa no disponible"}
           </p>
-          {precios.ahorro > 0 && (
+          {mostrarDivisa && precios.ahorro > 0 && (
             <p className="text-exito mt-1 text-xs">
               {formatearUsd(precios.divisa)} en divisas
             </p>

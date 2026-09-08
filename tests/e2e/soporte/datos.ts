@@ -66,6 +66,27 @@ export async function recargoActual(): Promise<number> {
   return Number(data?.recargo_bs_pct ?? 0);
 }
 
+/**
+ * Cambia los ajustes de la tienda y devuelve cómo estaban.
+ *
+ * Mismo cuidado que con los productos: son una fila única y compartida, así que
+ * una prueba que la deje movida le cambia el mundo a la siguiente.
+ */
+export async function ajustarAjustes(
+  cambios: Partial<{ recargo_bs_pct: number; mostrar_precio_divisa: boolean }>,
+) {
+  const { data: antes } = await db
+    .from("ajustes")
+    .select("recargo_bs_pct, mostrar_precio_divisa")
+    .eq("id", true)
+    .single();
+
+  await db.from("ajustes").update(cambios).eq("id", true);
+  return async () => {
+    await db.from("ajustes").update(antes!).eq("id", true);
+  };
+}
+
 export async function tasaVigente(): Promise<number> {
   const { data } = await db
     .from("tasas_cambio")

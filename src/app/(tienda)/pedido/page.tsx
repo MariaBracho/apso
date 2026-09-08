@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { FormularioPedido } from "@/app/(tienda)/pedido/formulario";
-import { obtenerRecargo, obtenerTasaVigente } from "@/lib/catalogo";
+import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { leerCarrito, resumir } from "@/lib/carrito";
 import { obtenerSesion } from "@/lib/sesion";
 import { formatearBs, formatearUsd } from "@/lib/formato";
@@ -11,11 +11,11 @@ import { preciosDe } from "@/lib/precio";
 export const metadata: Metadata = { title: "Tu pedido" };
 
 export default async function PaginaPedido() {
-  const [items, tasa, sesion, recargo] = await Promise.all([
+  const [items, tasa, sesion, { recargo }] = await Promise.all([
     leerCarrito(),
     obtenerTasaVigente(),
     obtenerSesion(),
-    obtenerRecargo(),
+    obtenerAjustes(),
   ]);
 
   if (items.length === 0) redirect("/carrito");

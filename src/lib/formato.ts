@@ -34,23 +34,3 @@ export function formatearBs(montoUsd: number, tasa: number): string {
 export function formatearTasa(tasa: number): string {
   return `Bs ${FORMATO_USD.format(tasa)} / $`;
 }
-
-/**
- * Cuánto se ahorra contra el precio del mismo producto en un marketplace con
- * comisión. Devuelve null cuando no hay comparación que hacer, para no
- * inventar un ahorro que no existe.
- */
-export function calcularAhorro(
-  precioUsd: number,
-  precioReferenciaUsd: number | null,
-): { monto: number; porcentaje: number } | null {
-  if (precioReferenciaUsd === null || precioReferenciaUsd <= precioUsd) {
-    return null;
-  }
-
-  const monto = precioReferenciaUsd - precioUsd;
-  return {
-    monto,
-    porcentaje: Math.round((monto / precioReferenciaUsd) * 100),
-  };
-}

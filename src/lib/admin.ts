@@ -16,7 +16,6 @@ export type ProductoAdmin = {
   slug: string;
   nombre: string;
   precio_usd: number;
-  precio_referencia_usd: number | null;
   stock: number;
   dias_encargo: number | null;
   activo: boolean;
@@ -31,7 +30,7 @@ export async function listarProductos(): Promise<ProductoAdmin[]> {
   const { data, error } = await supabase
     .from("productos")
     .select(
-      `id, slug, nombre, precio_usd, precio_referencia_usd, stock, dias_encargo,
+      `id, slug, nombre, precio_usd, stock, dias_encargo,
        activo, destacado,
        categoria:categorias (slug, nombre),
        marca:marcas (nombre)`,

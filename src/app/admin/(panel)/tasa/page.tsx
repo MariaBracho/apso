@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import {
-  FormularioRecargo,
+  FormularioPrecios,
   FormularioTasa,
 } from "@/app/admin/(panel)/tasa/formulario";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
@@ -24,12 +24,16 @@ export default async function PaginaTasa() {
       .select("id, valor, fuente, vigente_desde")
       .order("vigente_desde", { ascending: false })
       .limit(15),
-    supabase.from("ajustes").select("recargo_bs_pct").maybeSingle(),
+    supabase
+      .from("ajustes")
+      .select("recargo_bs_pct, mostrar_precio_divisa")
+      .maybeSingle(),
   ]);
 
   const tasas = historial ?? [];
   const vigente = tasas[0];
   const recargo = Number(ajustes?.recargo_bs_pct ?? 0);
+  const mostrarDivisa = ajustes?.mostrar_precio_divisa ?? false;
 
   return (
     <div className="mx-auto max-w-2xl px-8 py-10">
@@ -57,7 +61,7 @@ export default async function PaginaTasa() {
 
       <div className="space-y-10">
         <FormularioTasa />
-        <FormularioRecargo recargo={recargo} />
+        <FormularioPrecios recargo={recargo} mostrarDivisa={mostrarDivisa} />
       </div>
 
       {tasas.length > 1 && (

@@ -39,18 +39,21 @@ export type Database = {
           actualizado_en: string
           actualizado_por: string | null
           id: boolean
+          mostrar_precio_divisa: boolean
           recargo_bs_pct: number
         }
         Insert: {
           actualizado_en?: string
           actualizado_por?: string | null
           id?: boolean
+          mostrar_precio_divisa?: boolean
           recargo_bs_pct?: number
         }
         Update: {
           actualizado_en?: string
           actualizado_por?: string | null
           id?: boolean
+          mostrar_precio_divisa?: boolean
           recargo_bs_pct?: number
         }
         Relationships: [

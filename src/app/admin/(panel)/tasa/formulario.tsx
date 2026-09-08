@@ -5,17 +5,18 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { fijarRecargo, fijarTasa } from "@/app/admin/(panel)/tasa/acciones";
+import { fijarPrecios, fijarTasa } from "@/app/admin/(panel)/tasa/acciones";
 import {
   Campo,
   ErrorServidor,
+  Interruptor,
   estiloEntrada,
   estiloEntradaMal,
 } from "@/components/formulario/campos";
 import {
-  type DatosRecargo,
+  type DatosPrecios,
   type DatosTasa,
-  esquemaRecargo,
+  esquemaPrecios,
   esquemaTasa,
 } from "@/lib/esquemas";
 
@@ -89,21 +90,34 @@ export function FormularioTasa() {
 }
 
 /**
- * Recargo por pagar en bolívares.
+ * Los dos precios de la tienda.
  *
- * Existe porque la tienda cobra en bolívares pero repone inventario comprando
- * dólares: a tasa BCV pelada pierde la diferencia en cada venta. Va en el
- * precio y no en la tasa — la tasa del BCV es un dato oficial y tiene que
- * poder contrastarse.
+ * El recargo existe porque la tienda cobra en bolívares pero repone inventario
+ * comprando dólares: a tasa BCV pelada pierde la diferencia en cada venta. Va
+ * en el precio y no en la tasa — la tasa del BCV es un dato oficial y tiene
+ * que poder contrastarse.
+ *
+ * El interruptor decide si esa diferencia se anuncia en el catálogo. Van
+ * juntos y con un solo botón porque son la misma decisión mirada dos veces:
+ * cuánto y si se cuenta.
  */
-export function FormularioRecargo({ recargo }: { recargo: number }) {
+export function FormularioPrecios({
+  recargo,
+  mostrarDivisa,
+}: {
+  recargo: number;
+  mostrarDivisa: boolean;
+}) {
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<DatosRecargo>({
-    resolver: yupResolver(esquemaRecargo),
-    defaultValues: { recargo_bs_pct: recargo },
+  } = useForm<DatosPrecios>({
+    resolver: yupResolver(esquemaPrecios),
+    defaultValues: {
+      recargo_bs_pct: recargo,
+      mostrar_precio_divisa: mostrarDivisa,
+    },
     mode: "onBlur",
   });
 
@@ -112,36 +126,60 @@ export function FormularioRecargo({ recargo }: { recargo: number }) {
   const enviar = handleSubmit(async (datos) => {
     setErrorServidor(null);
 
-    const resultado = await fijarRecargo(datos);
+    const resultado = await fijarPrecios(datos);
     if (resultado && "error" in resultado) {
       setErrorServidor(resultado.error);
       return;
     }
 
-    toast.success(`Recargo fijado en ${datos.recargo_bs_pct} %`, {
-      description: "Los precios en bolívares del catálogo ya cambiaron.",
+    toast.success("Precios guardados", {
+      description: datos.mostrar_precio_divisa
+        ? `Recargo del ${datos.recargo_bs_pct} % y el precio en divisas a la vista.`
+        : `Recargo del ${datos.recargo_bs_pct} %. El precio en divisas no se anuncia.`,
     });
   });
 
   return (
     <form onSubmit={enviar} noValidate className="space-y-4">
       <h2 className="etiqueta text-texto-3 text-[10px]">
-        Recargo por pagar en bolívares
+        Precios de la tienda
       </h2>
 
-      <div className="sm:w-56">
-        <Campo
-          etiqueta="Porcentaje sobre el precio"
-          ayuda="En 0 los dos precios son iguales."
-          error={errors.recargo_bs_pct?.message}
-        >
-          <input
-            {...register("recargo_bs_pct")}
-            inputMode="decimal"
-            placeholder="19"
-            className={errors.recargo_bs_pct ? estiloEntradaMal : estiloEntrada}
-          />
-        </Campo>
+      <div className="space-y-2">
+        <div className="sm:w-56">
+          <Campo
+            etiqueta="Recargo por pagar en bolívares"
+            ayuda="En 0 los dos precios son iguales."
+            error={errors.recargo_bs_pct?.message}
+          >
+            <input
+              {...register("recargo_bs_pct")}
+              inputMode="decimal"
+              placeholder="19"
+              className={
+                errors.recargo_bs_pct ? estiloEntradaMal : estiloEntrada
+              }
+            />
+          </Campo>
+        </div>
+        <p className="text-texto-meta max-w-md text-xs leading-relaxed">
+          Cambia el precio en bolívares de todo el catálogo de inmediato. El
+          precio en divisas no se toca: ese es el que está cargado en cada
+          producto. Los pedidos ya hechos tampoco se mueven.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Interruptor
+          etiqueta="Anunciar el precio pagando en dólares"
+          {...register("mostrar_precio_divisa")}
+        />
+        <p className="text-texto-meta max-w-md text-xs leading-relaxed">
+          Apagado, el catálogo y la ficha muestran un solo precio. Quien pague
+          en efectivo, Zelle, Binance o tarjeta sigue pagando el de divisas: el
+          carrito y el pedido lo siguen mostrando, porque ahí ya se eligió cómo
+          pagar y el número tiene que ser el que se cobra.
+        </p>
       </div>
 
       <ErrorServidor mensaje={errorServidor} />
@@ -151,14 +189,8 @@ export function FormularioRecargo({ recargo }: { recargo: number }) {
         disabled={isSubmitting}
         className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora border px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? "Guardando…" : "Guardar recargo"}
+        {isSubmitting ? "Guardando…" : "Guardar precios"}
       </button>
-
-      <p className="text-texto-meta text-xs leading-relaxed">
-        Cambia el precio en bolívares de todo el catálogo de inmediato. El
-        precio en divisas no se toca: ese es el que está cargado en cada
-        producto. Los pedidos ya hechos tampoco se mueven.
-      </p>
     </form>
   );
 }

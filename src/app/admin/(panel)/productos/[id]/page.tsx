@@ -12,7 +12,7 @@ import {
   obtenerProductoAdmin,
 } from "@/lib/admin";
 import { HistorialInventario } from "@/components/admin/historial-inventario";
-import { obtenerRecargo } from "@/lib/catalogo";
+import { obtenerAjustes } from "@/lib/catalogo";
 
 export const metadata: Metadata = { title: "Editar producto" };
 
@@ -23,13 +23,13 @@ export default async function PaginaEditarProducto({
 }) {
   const { id } = await params;
 
-  const [producto, categorias, marcas, fotos, recargo, movimientos] =
+  const [producto, categorias, marcas, fotos, { recargo }, movimientos] =
     await Promise.all([
       obtenerProductoAdmin(id),
       listarCategorias(),
       listarMarcas(),
       listarFotos(id),
-      obtenerRecargo(),
+      obtenerAjustes(),
       listarMovimientos(id),
     ]);
 
@@ -67,10 +67,6 @@ export default async function PaginaEditarProducto({
               ? producto.especificaciones
               : [{ clave: "", valor: "" }],
           precio_usd: Number(producto.precio_usd),
-          precio_referencia_usd:
-            producto.precio_referencia_usd === null
-              ? null
-              : Number(producto.precio_referencia_usd),
           stock: producto.stock,
           dias_encargo: producto.dias_encargo,
           condicion: producto.condicion,

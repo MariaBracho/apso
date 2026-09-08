@@ -17,7 +17,7 @@ import {
   obtenerProductos,
   obtenerSubcategorias,
   obtenerTasaVigente,
-  obtenerRecargo,
+  obtenerAjustes,
 } from "@/lib/catalogo";
 import { aDivisa, preciosDe } from "@/lib/precio";
 import {
@@ -55,7 +55,7 @@ export default async function PaginaCategoria({
   const filtrosCrudos = await searchParams;
   const filtros = interpretarFiltros(filtrosCrudos);
 
-  const recargo = await obtenerRecargo();
+  const { recargo, mostrarDivisa } = await obtenerAjustes();
 
   // El slider habla en los precios que se ven en las tarjetas —los de pagar en
   // bolívares— pero la base guarda los de divisas, así que lo que elige el
@@ -146,6 +146,7 @@ export default async function PaginaCategoria({
                   producto={producto}
                   tasa={tasa}
                   recargo={recargo}
+                  mostrarDivisa={mostrarDivisa}
                 />
               ))}
             </div>

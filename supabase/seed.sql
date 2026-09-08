@@ -54,13 +54,13 @@ insert into public.marcas (slug, nombre) values
 -- ---------------------------------------------------------------------------
 -- Productos
 --
--- precio_referencia_usd es lo que cuesta el mismo producto en un marketplace
--- con comisión. Es el número tachado del bloque de ahorro.
+-- precio_usd es el precio pagando en dólares. El de bolívares no se guarda: se
+-- deriva sumándole el recargo de `ajustes`.
 -- ---------------------------------------------------------------------------
 
 insert into public.productos (
   slug, nombre, categoria_id, marca_id, resumen, especificaciones,
-  precio_usd, precio_referencia_usd, stock, dias_encargo,
+  precio_usd, stock, dias_encargo,
   garantia_meses, garantia_vitalicia, destacado
 )
 select
@@ -68,7 +68,7 @@ select
   (select id from public.categorias where slug = v.categoria),
   (select id from public.marcas where slug = v.marca),
   v.resumen, v.especificaciones::jsonb,
-  v.precio_usd, v.precio_referencia_usd, v.stock, v.dias_encargo,
+  v.precio_usd, v.stock, v.dias_encargo,
   v.garantia_meses, v.garantia_vitalicia, v.destacado
 from (values
 
@@ -77,80 +77,80 @@ from (values
    'ram', 'corsair',
    'El punto dulce para editar video y jugar sin quedarse corto.',
    '[{"clave": "Capacidad", "valor": "2 × 16 GB"}, {"clave": "Velocidad", "valor": "6000 MT/s"}, {"clave": "Latencia", "valor": "CL30"}, {"clave": "Tipo", "valor": "DDR5"}, {"clave": "Perfil", "valor": "XMP 3.0"}]',
-   120.00, 138.00, 3, null, null, true, true),
+   120.00, 3, null, null, true, true),
 
   ('kingston-fury-beast-16gb-ddr5-5600', 'Kingston Fury Beast 16 GB DDR5 5600',
    'ram', 'kingston',
    'Suficiente para oficina y estudio. Sube a 32 GB si editas.',
    '[{"clave": "Capacidad", "valor": "2 × 8 GB"}, {"clave": "Velocidad", "valor": "5600 MT/s"}, {"clave": "Latencia", "valor": "CL36"}, {"clave": "Tipo", "valor": "DDR5"}, {"clave": "Perfil", "valor": "XMP 3.0"}]',
-   62.00, 74.00, 8, null, null, true, false),
+   62.00, 8, null, null, true, false),
 
   ('corsair-vengeance-64gb-ddr5-6000', 'Corsair Vengeance 64 GB DDR5 6000',
    'ram', 'corsair',
    'Para proyectos de 4K con muchas capas. Se trae por encargo.',
    '[{"clave": "Capacidad", "valor": "2 × 32 GB"}, {"clave": "Velocidad", "valor": "6000 MT/s"}, {"clave": "Latencia", "valor": "CL30"}, {"clave": "Tipo", "valor": "DDR5"}, {"clave": "Perfil", "valor": "XMP 3.0"}]',
-   232.00, 268.00, 0, 12, null, true, false),
+   232.00, 0, 12, null, true, false),
 
   ('kingston-fury-beast-32gb-ddr4-3200', 'Kingston Fury Beast 32 GB DDR4 3200',
    'ram', 'kingston',
    'La mejora que más rinde en un equipo con placa DDR4.',
    '[{"clave": "Capacidad", "valor": "2 × 16 GB"}, {"clave": "Velocidad", "valor": "3200 MT/s"}, {"clave": "Latencia", "valor": "CL16"}, {"clave": "Tipo", "valor": "DDR4"}, {"clave": "Perfil", "valor": "XMP 2.0"}]',
-   78.00, 92.00, 5, null, null, true, false),
+   78.00, 5, null, null, true, false),
 
   -- --- Tarjetas gráficas ---
   ('asus-dual-rtx-4060-ti-8gb', 'ASUS Dual GeForce RTX 4060 Ti 8 GB',
    'graficas', 'asus',
    'Juega en 1080p y 1440p con cuadros de sobra.',
    '[{"clave": "Memoria", "valor": "8 GB GDDR6"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×8"}, {"clave": "Salidas", "valor": "3 × DisplayPort, 1 × HDMI"}, {"clave": "Consumo", "valor": "160 W"}, {"clave": "Fuente sugerida", "valor": "550 W"}]',
-   319.00, 368.00, 2, null, 36, false, true),
+   319.00, 2, null, 36, false, true),
 
   ('msi-ventus-rtx-4060-8gb', 'MSI Ventus 2X GeForce RTX 4060 8 GB',
    'graficas', 'msi',
    'La opción de mejor precio por cuadro para 1080p.',
    '[{"clave": "Memoria", "valor": "8 GB GDDR6"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×8"}, {"clave": "Salidas", "valor": "3 × DisplayPort, 1 × HDMI"}, {"clave": "Consumo", "valor": "115 W"}, {"clave": "Fuente sugerida", "valor": "450 W"}]',
-   268.00, 310.00, 1, null, 36, false, false),
+   268.00, 1, null, 36, false, false),
 
   ('asus-dual-rx-7600-8gb', 'ASUS Dual Radeon RX 7600 8 GB',
    'graficas', 'asus',
    'Alternativa AMD para 1080p. Llega por encargo en dos semanas.',
    '[{"clave": "Memoria", "valor": "8 GB GDDR6"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×8"}, {"clave": "Salidas", "valor": "3 × DisplayPort, 1 × HDMI"}, {"clave": "Consumo", "valor": "165 W"}, {"clave": "Fuente sugerida", "valor": "550 W"}]',
-   245.00, 282.00, 0, 14, 24, false, false),
+   245.00, 0, 14, 24, false, false),
 
   -- --- Almacenamiento ---
   ('samsung-990-pro-1tb', 'Samsung 990 PRO 1 TB NVMe',
    'almacenamiento', 'samsung',
    'El más rápido que vale la pena. Se nota al abrir proyectos pesados.',
    '[{"clave": "Capacidad", "valor": "1 TB"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×4 NVMe"}, {"clave": "Lectura", "valor": "7.450 MB/s"}, {"clave": "Escritura", "valor": "6.900 MB/s"}, {"clave": "Formato", "valor": "M.2 2280"}]',
-   96.00, 112.00, 6, null, 60, false, true),
+   96.00, 6, null, 60, false, true),
 
   ('crucial-p3-plus-1tb', 'Crucial P3 Plus 1 TB NVMe',
    'almacenamiento', 'crucial',
    'Para almacenar sin pagar de más. Rinde igual en uso diario.',
    '[{"clave": "Capacidad", "valor": "1 TB"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×4 NVMe"}, {"clave": "Lectura", "valor": "5.000 MB/s"}, {"clave": "Escritura", "valor": "3.600 MB/s"}, {"clave": "Formato", "valor": "M.2 2280"}]',
-   64.00, 76.00, 9, null, 60, false, false),
+   64.00, 9, null, 60, false, false),
 
   ('samsung-990-pro-2tb', 'Samsung 990 PRO 2 TB NVMe',
    'almacenamiento', 'samsung',
    'Si editas en 4K, el espacio se acaba antes que la velocidad.',
    '[{"clave": "Capacidad", "valor": "2 TB"}, {"clave": "Interfaz", "valor": "PCIe 4.0 ×4 NVMe"}, {"clave": "Lectura", "valor": "7.450 MB/s"}, {"clave": "Escritura", "valor": "6.900 MB/s"}, {"clave": "Formato", "valor": "M.2 2280"}]',
-   178.00, 206.00, 2, null, 60, false, false),
+   178.00, 2, null, 60, false, false),
 
   -- --- Laptops ---
   ('lenovo-ideapad-slim-3-15', 'Lenovo IdeaPad Slim 3 15',
    'laptops', 'lenovo',
    'Para estudiar y trabajar. Liviana y sin cuentos.',
    '[{"clave": "Procesador", "valor": "Ryzen 5 7520U"}, {"clave": "Memoria", "valor": "16 GB LPDDR5"}, {"clave": "Almacenamiento", "valor": "512 GB NVMe"}, {"clave": "Pantalla", "valor": "15,6\" FHD IPS"}, {"clave": "Batería", "valor": "hasta 9 h"}]',
-   389.00, 448.00, 1, null, 12, false, false),
+   389.00, 1, null, 12, false, false),
 
   ('hp-victus-15', 'HP Victus 15',
    'laptops', 'hp',
    'Laptop para jugar sin pagar precio de gama alta. Por encargo.',
    '[{"clave": "Procesador", "valor": "Core i5-12450H"}, {"clave": "Gráfica", "valor": "RTX 2050 4 GB"}, {"clave": "Memoria", "valor": "16 GB DDR4"}, {"clave": "Almacenamiento", "valor": "512 GB NVMe"}, {"clave": "Pantalla", "valor": "15,6\" FHD 144 Hz"}]',
-   598.00, 689.00, 0, 10, 12, false, false)
+   598.00, 0, 10, 12, false, false)
 
 ) as v (
   slug, nombre, categoria, marca, resumen, especificaciones,
-  precio_usd, precio_referencia_usd, stock, dias_encargo,
+  precio_usd, stock, dias_encargo,
   garantia_meses, garantia_vitalicia, destacado
 );
 

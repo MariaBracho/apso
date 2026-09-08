@@ -101,7 +101,6 @@ export type ProductoListado = {
   nombre: string;
   resumen: string | null;
   precio_usd: number;
-  precio_referencia_usd: number | null;
   stock: number;
   dias_encargo: number | null;
   condicion: Condicion;
