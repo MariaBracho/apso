@@ -5,6 +5,7 @@ import {
   borrarPedido,
   db,
   productoPorSlug,
+  recargoActual,
   rutaDe,
 } from "./soporte/datos";
 import { entrarComoAdmin } from "./soporte/sesion";
@@ -19,12 +20,25 @@ test.describe("Panel", () => {
   });
 
   test("con sesión se llega al inventario y a la tienda", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const recargo = await recargoActual();
+
     await entrarComoAdmin(page);
     await page.goto("/admin/productos");
 
     await expect(page.getByRole("heading", { name: "Inventario", level: 1 })).toBeVisible();
-    // La columna dice cuál de los dos precios muestra.
+
+    // Las dos columnas de precio, cada una nombrada: el que se carga y el que
+    // ve el cliente. La cuenta entre las dos es la misma que hace la tienda.
     await expect(page.getByText("En divisas")).toBeVisible();
+    await expect(page.getByText("A tasa BCV")).toBeVisible();
+
+    const enBolivares = Math.round(producto.precio_usd * (1 + recargo / 100) * 100) / 100;
+    const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
+    await expect(fila).toContainText(
+      `$${enBolivares.toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+    );
+
     await expect(page.getByRole("link", { name: /ir a la tienda/i })).toBeVisible();
   });
 });

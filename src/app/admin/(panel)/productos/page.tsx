@@ -4,13 +4,19 @@ import Link from "next/link";
 import { EditorStock } from "@/components/admin/editor-stock";
 import { InterruptorPublicado } from "@/components/admin/interruptor-publicado";
 import { listarProductos } from "@/lib/admin";
+import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { disponibilidadDe } from "@/lib/producto";
-import { formatearUsd } from "@/lib/formato";
+import { formatearBs, formatearUsd } from "@/lib/formato";
+import { preciosDe } from "@/lib/precio";
 
 export const metadata: Metadata = { title: "Inventario" };
 
 export default async function PaginaInventario() {
-  const productos = await listarProductos();
+  const [productos, { recargo }, tasa] = await Promise.all([
+    listarProductos(),
+    obtenerAjustes(),
+    obtenerTasaVigente(),
+  ]);
 
   const sinStock = productos.filter(
     (p) => p.activo && disponibilidadDe(p) === "sin_stock",
@@ -40,15 +46,16 @@ export default async function PaginaInventario() {
       {productos.length === 0 ? (
         <Vacio />
       ) : (
-        <div className="border-borde-sutil overflow-hidden rounded-panel border">
+        <div className="border-borde-sutil overflow-x-auto rounded-panel border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-borde-sutil bg-superficie border-b">
                 <Th>Producto</Th>
-                {/* Se nombra cuál de los dos: desde que hay precio en divisas
-                    y precio en bolívares, «Precio» a secas se lee como el de
-                    la tienda, que es el otro. */}
+                {/* Los dos precios, en el orden en que se piensan: el de
+                    divisas es el que se carga, y el de al lado es el que ve
+                    quien entra a la tienda. «Precio» a secas no diría cuál. */}
                 <Th alineado="derecha">En divisas</Th>
+                <Th alineado="derecha">A tasa BCV</Th>
                 <Th alineado="derecha">Estado</Th>
                 <Th alineado="derecha">Stock</Th>
                 <Th alineado="centro">Visible</Th>
@@ -71,8 +78,18 @@ export default async function PaginaInventario() {
                     </p>
                   </td>
 
-                  <td className="text-ambar font-display px-4 py-3 text-right font-semibold">
+                  {/* En verde y en ámbar como en la tienda, para que el color
+                      signifique lo mismo en los dos lados. */}
+                  <td className="text-exito font-display px-4 py-3 text-right whitespace-nowrap">
                     {formatearUsd(producto.precio_usd)}
+                  </td>
+
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <PrecioBcv
+                      precioDivisa={producto.precio_usd}
+                      recargo={recargo}
+                      tasa={tasa}
+                    />
                   </td>
 
                   <td className="px-4 py-3 text-right">
@@ -110,6 +127,36 @@ export default async function PaginaInventario() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * El precio que ve quien entra a la tienda.
+ *
+ * Es el de divisas más el recargo, y debajo esos mismos dólares por la tasa del
+ * BCV. Van juntos porque es la cuenta que el cliente puede rehacer a mano: si
+ * el de arriba por la tasa no da el de abajo, algo está mal.
+ */
+function PrecioBcv({
+  precioDivisa,
+  recargo,
+  tasa,
+}: {
+  precioDivisa: number;
+  recargo: number;
+  tasa: number | null;
+}) {
+  const { bolivares } = preciosDe(precioDivisa, recargo);
+
+  return (
+    <>
+      <p className="text-ambar font-display font-semibold">
+        {formatearUsd(bolivares)}
+      </p>
+      <p className="text-texto-meta text-xs">
+        {tasa === null ? "Sin tasa cargada" : formatearBs(bolivares, tasa)}
+      </p>
+    </>
   );
 }
 
