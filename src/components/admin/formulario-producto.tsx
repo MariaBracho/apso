@@ -17,7 +17,12 @@ import {
 } from "@/components/formulario/campos";
 import { type Foto, GestorFotos } from "@/components/admin/gestor-fotos";
 import { type DatosProducto, esquemaProducto } from "@/lib/esquemas";
-import { CONDICIONES, NOMBRE_CONDICION } from "@/lib/producto";
+import {
+  CONDICIONES,
+  NOMBRE_CONDICION,
+  NOMBRE_RESPALDO,
+  RESPALDOS,
+} from "@/lib/producto";
 import { generarSlug } from "@/lib/texto";
 
 export type OpcionSelect = { id: string; nombre: string };
@@ -34,6 +39,8 @@ export const PRODUCTO_VACIO: DatosProducto = {
   stock: 0,
   dias_encargo: null,
   condicion: "nuevo",
+  procedencia: "EE. UU.",
+  garantia_respalda: "fabricante",
   garantia_meses: null,
   garantia_vitalicia: false,
   destacado: false,
@@ -290,7 +297,10 @@ export function FormularioProducto({
         )}
       </Seccion>
 
-      <Seccion titulo="Procedencia y garantía">
+      <Seccion
+        titulo="Procedencia y garantía"
+        nota="Las dos salen en la ficha tal cual se escriben aquí. No todo viene de EE. UU. ni lo respalda siempre el fabricante, así que se cargan producto por producto."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Condición">
             {/* De la lista y no escritas a mano: así agregar una condición no
@@ -300,6 +310,39 @@ export function FormularioProducto({
               {CONDICIONES.map((c) => (
                 <option key={c} value={c}>
                   {NOMBRE_CONDICION[c]}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          <Campo
+            etiqueta="Viene de"
+            ayuda="Sale en la ficha como «Nuevo, de EE. UU.»."
+            error={errors.procedencia?.message}
+          >
+            {/* Texto libre y no una lista cerrada: la lista de países de donde
+                puede llegar algo no se sabe de antemano, y una opción que
+                falte obligaría a volver a la base. Las sugerencias cubren lo
+                de siempre sin cerrar la puerta. */}
+            <input
+              {...register("procedencia")}
+              list="procedencias"
+              placeholder="EE. UU."
+              className={errors.procedencia ? estiloEntradaMal : estiloEntrada}
+            />
+            <datalist id="procedencias">
+              <option value="EE. UU." />
+              <option value="Venezuela" />
+              <option value="China" />
+              <option value="Panamá" />
+            </datalist>
+          </Campo>
+
+          <Campo etiqueta="Responde por la garantía">
+            <select {...register("garantia_respalda")} className={estiloEntrada}>
+              {RESPALDOS.map((r) => (
+                <option key={r} value={r}>
+                  {NOMBRE_RESPALDO[r]}
                 </option>
               ))}
             </select>

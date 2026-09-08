@@ -663,6 +663,7 @@ export type Database = {
           dias_encargo: number | null
           especificaciones: Json
           garantia_meses: number | null
+          garantia_respalda: Database["public"]["Enums"]["respaldo_garantia"]
           garantia_vitalicia: boolean
           id: string
           marca_id: string | null
@@ -685,6 +686,7 @@ export type Database = {
           dias_encargo?: number | null
           especificaciones?: Json
           garantia_meses?: number | null
+          garantia_respalda?: Database["public"]["Enums"]["respaldo_garantia"]
           garantia_vitalicia?: boolean
           id?: string
           marca_id?: string | null
@@ -707,6 +709,7 @@ export type Database = {
           dias_encargo?: number | null
           especificaciones?: Json
           garantia_meses?: number | null
+          garantia_respalda?: Database["public"]["Enums"]["respaldo_garantia"]
           garantia_vitalicia?: boolean
           id?: string
           marca_id?: string | null
@@ -853,6 +856,7 @@ export type Database = {
         | "efectivo"
         | "tarjeta_internacional"
       motivo_movimiento: "entrada" | "venta" | "devolucion" | "ajuste"
+      respaldo_garantia: "fabricante" | "apso"
       rol_usuario: "cliente" | "admin"
       tipo_entrega: "punto_fijo" | "envio_nacional"
     }
@@ -1011,6 +1015,7 @@ export const Constants = {
         "tarjeta_internacional",
       ],
       motivo_movimiento: ["entrada", "venta", "devolucion", "ajuste"],
+      respaldo_garantia: ["fabricante", "apso"],
       rol_usuario: ["cliente", "admin"],
       tipo_entrega: ["punto_fijo", "envio_nacional"],
     },

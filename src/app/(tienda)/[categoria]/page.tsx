@@ -49,13 +49,19 @@ export default async function PaginaCategoria({
   searchParams: Promise<Busqueda>;
 }) {
   const { categoria: slug } = await params;
-  const categoria = await obtenerCategoriaPorSlug(slug);
+
+  // Los ajustes y la tasa no dependen de la categoría, así que se piden a la
+  // vez y no en fila detrás de ella: eran dos viajes a la base esperando por
+  // nada, y se notaban al cambiar de categoría.
+  const [categoria, { recargo, mostrarDivisa }, tasa] = await Promise.all([
+    obtenerCategoriaPorSlug(slug),
+    obtenerAjustes(),
+    obtenerTasaVigente(),
+  ]);
   if (!categoria) notFound();
 
   const filtrosCrudos = await searchParams;
   const filtros = interpretarFiltros(filtrosCrudos);
-
-  const { recargo, mostrarDivisa } = await obtenerAjustes();
 
   // El slider habla en los precios que se ven en las tarjetas —los de pagar en
   // bolívares— pero la base guarda los de divisas, así que lo que elige el
@@ -76,11 +82,10 @@ export default async function PaginaCategoria({
   // El listado sin filtrar sirve para dos cosas: los conteos del sidebar y los
   // topes del slider. Los conteos muestran lo que hay en la categoría, no lo
   // que queda después de filtrar — si no, marcar un filtro vaciaría el resto.
-  const [todos, productos, subcategorias, tasa] = await Promise.all([
+  const [todos, productos, subcategorias] = await Promise.all([
     obtenerProductos(categoria),
     obtenerProductos(categoria, filtrosBase),
     obtenerSubcategorias(categoria.id),
-    obtenerTasaVigente(),
   ]);
 
   const precios = todos.map((p) => preciosDe(p.precio_usd, recargo).bolivares);
@@ -110,7 +115,8 @@ export default async function PaginaCategoria({
         </h1>
         <p className="text-texto-2 mt-2 text-sm">
           {todos.length} {todos.length === 1 ? "producto" : "productos"}.
-          Original de EE. UU., con procedencia y garantía claras.
+          De cada uno decimos en qué estado está, de dónde viene y quién
+          responde por la garantía.
         </p>
       </header>
 

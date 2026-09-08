@@ -104,17 +104,41 @@ export async function tasaVigente(): Promise<number> {
  */
 export async function ajustarProducto(
   id: string,
-  cambios: Partial<{ stock: number; activo: boolean; condicion: string; precio_usd: number }>,
+  cambios: Partial<{
+    stock: number;
+    activo: boolean;
+    condicion: string;
+    precio_usd: number;
+    procedencia: string;
+    garantia_respalda: string;
+    garantia_meses: number | null;
+    garantia_vitalicia: boolean;
+  }>,
 ) {
   const { data: antes } = await db
     .from("productos")
-    .select("stock, activo, condicion, precio_usd")
+    .select(
+      "stock, activo, condicion, precio_usd, procedencia, garantia_respalda, garantia_meses, garantia_vitalicia",
+    )
     .eq("id", id)
     .single();
 
-  await db.from("productos").update(cambios).eq("id", id);
+  // Se revisa el error en vez de seguir de largo. Una restricción de la base
+  // que rechace el cambio dejaba el producto como estaba y la prueba fallaba
+  // más adelante, contra la pantalla, sin decir que el problema fue aquí.
+  const { error } = await db.from("productos").update(cambios).eq("id", id);
+  if (error) {
+    throw new Error(`No se pudo preparar el producto ${id}: ${error.message}`);
+  }
+
   return async () => {
-    await db.from("productos").update(antes!).eq("id", id);
+    const { error: alVolver } = await db
+      .from("productos")
+      .update(antes!)
+      .eq("id", id);
+    if (alVolver) {
+      throw new Error(`No se pudo restaurar el producto ${id}: ${alVolver.message}`);
+    }
   };
 }
 

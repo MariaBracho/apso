@@ -40,7 +40,7 @@ export const NOMBRE_ESTADO: Record<EstadoPedido, string> = {
 export const CONTEXTO_ESTADO: Record<EstadoPedido, string> = {
   por_confirmar: "Lo tenemos. Te confirmamos disponibilidad y forma de pago.",
   confirmado_y_pagado: "Pago verificado. Ya es tuyo.",
-  comprado: "Lo compramos en Estados Unidos.",
+  comprado: "Ya lo compramos con el proveedor.",
   en_transito: "Viene en camino hacia Venezuela.",
   en_aduana: "Está en aduana. Es el paso menos predecible.",
   aqui: "Ya llegó al país y lo tenemos nosotros.",

@@ -106,6 +106,40 @@ test.describe("Catálogo", () => {
     }
   });
 
+  /**
+   * Procedencia y garantía se cargan por producto.
+   *
+   * La ficha decía siempre «de EE. UU.» y «del fabricante» porque ninguno de
+   * los dos se podía editar. No siempre es así, y afirmarlo manda al cliente a
+   * reclamarle a quien no responde.
+   */
+  test("la ficha dice de dónde viene y quién responde por la garantía", async ({ page }) => {
+    const producto = await productoPorSlug("corsair-vengeance-32gb-ddr5-6000");
+    const ruta = await rutaDe(producto.slug);
+
+    // La de por vida se apaga a la vez: la base no deja tener las dos.
+    const restaurar = await ajustarProducto(producto.id, {
+      procedencia: "Venezuela",
+      garantia_respalda: "apso",
+      garantia_vitalicia: false,
+      garantia_meses: 6,
+    });
+
+    try {
+      await page.goto(ruta);
+      const ficha = page.locator("main");
+      await expect(ficha).toContainText("de Venezuela");
+      await expect(ficha).toContainText("6 meses, de apso");
+      await expect(ficha).not.toContainText("del fabricante");
+    } finally {
+      await restaurar();
+    }
+
+    // Y al restaurarlo vuelve a decir lo de siempre, que es lo normal.
+    await page.goto(ruta);
+    await expect(page.locator("main")).toContainText("de EE. UU.");
+  });
+
   test("un producto despublicado sale del catálogo pero su ficha sigue en pie", async ({ page }) => {
     const producto = await productoPorSlug("corsair-vengeance-32gb-ddr5-6000");
     const ruta = await rutaDe(producto.slug);

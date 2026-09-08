@@ -18,7 +18,7 @@ import {
 import { ASESOR, enlaceWhatsapp } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 import { type Precios, preciosDe } from "@/lib/precio";
-import { NOMBRE_CONDICION } from "@/lib/producto";
+import { NOMBRE_CONDICION, textoGarantia } from "@/lib/producto";
 
 type Params = { categoria: string; producto: string };
 
@@ -212,17 +212,6 @@ function Especificaciones({ producto }: { producto: ProductoFicha }) {
       </dl>
     </section>
   );
-}
-
-function textoGarantia(producto: ProductoFicha): string {
-  if (producto.garantia_vitalicia) return "De por vida, del fabricante";
-  if (producto.garantia_meses === null) return "Consultar con el fabricante";
-
-  const años = producto.garantia_meses / 12;
-  if (Number.isInteger(años) && años >= 1) {
-    return `${años} ${años === 1 ? "año" : "años"}, del fabricante`;
-  }
-  return `${producto.garantia_meses} meses, del fabricante`;
 }
 
 function PanelCompra({

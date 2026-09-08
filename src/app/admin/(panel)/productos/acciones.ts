@@ -42,6 +42,8 @@ async function preparar(datos: DatosProducto) {
       stock: p.stock,
       dias_encargo: p.dias_encargo,
       condicion: p.condicion,
+      procedencia: p.procedencia,
+      garantia_respalda: p.garantia_respalda,
       // La restricción de la base impide tener las dos a la vez.
       garantia_meses: p.garantia_vitalicia ? null : p.garantia_meses,
       garantia_vitalicia: p.garantia_vitalicia,

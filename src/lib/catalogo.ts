@@ -32,7 +32,7 @@ const CAMPOS_LISTADO = `
 const CAMPOS_FICHA = `
   id, slug, nombre, resumen, descripcion, especificaciones,
   precio_usd, stock, dias_encargo,
-  condicion, procedencia, garantia_meses, garantia_vitalicia,
+  condicion, procedencia, garantia_meses, garantia_vitalicia, garantia_respalda,
   categoria:categorias!inner (slug, nombre),
   marca:marcas (slug, nombre),
   imagenes:producto_imagenes (url, alt)

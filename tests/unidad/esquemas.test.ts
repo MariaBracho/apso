@@ -20,6 +20,8 @@ const PRODUCTO_BASE = {
   stock: 3,
   dias_encargo: null,
   condicion: "nuevo",
+  procedencia: "EE. UU.",
+  garantia_respalda: "fabricante",
   garantia_meses: 12,
   garantia_vitalicia: false,
   destacado: false,

@@ -31,6 +31,23 @@ export const CONDICIONES: Condicion[] = [
   "usado",
 ];
 
+/**
+ * Quién responde si el equipo falla.
+ *
+ * No es lo mismo que cuánto dura: se puede tener doce meses del fabricante o
+ * doce meses de la tienda. Decirlo importa porque es a quién hay que tocarle la
+ * puerta, y mandar al cliente al fabricante cuando responde apso lo deja dando
+ * vueltas.
+ */
+export type Respaldo = "fabricante" | "apso";
+
+export const RESPALDOS: Respaldo[] = ["fabricante", "apso"];
+
+export const NOMBRE_RESPALDO: Record<Respaldo, string> = {
+  fabricante: "El fabricante",
+  apso: "apso",
+};
+
 export type CategoriaRef = {
   slug: string;
   nombre: string;
@@ -113,11 +130,41 @@ export type ProductoListado = {
 export type ProductoFicha = ProductoListado & {
   descripcion: string | null;
   especificaciones: Especificacion[];
-  condicion: "nuevo" | "reacondicionado";
   procedencia: string;
   garantia_meses: number | null;
   garantia_vitalicia: boolean;
+  garantia_respalda: Respaldo;
 };
+
+/**
+ * La garantía en una línea: cuánto dura y quién responde.
+ *
+ * Sin duración no se inventa ninguna — se dice a quién preguntar. Prometer
+ * doce meses porque suele ser eso sería justo la clase de promesa que la tienda
+ * no puede cumplir.
+ */
+export function textoGarantia(producto: {
+  garantia_vitalicia: boolean;
+  garantia_meses: number | null;
+  garantia_respalda: Respaldo;
+}): string {
+  const deQuien =
+    producto.garantia_respalda === "apso" ? "de apso" : "del fabricante";
+
+  if (producto.garantia_vitalicia) return `De por vida, ${deQuien}`;
+
+  if (producto.garantia_meses === null) {
+    return producto.garantia_respalda === "apso"
+      ? "Consúltanos por la garantía"
+      : "Consultar con el fabricante";
+  }
+
+  const años = producto.garantia_meses / 12;
+  if (Number.isInteger(años) && años >= 1) {
+    return `${años} ${años === 1 ? "año" : "años"}, ${deQuien}`;
+  }
+  return `${producto.garantia_meses} meses, ${deQuien}`;
+}
 
 /**
  * Estado de disponibilidad de un producto.

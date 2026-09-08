@@ -1,6 +1,6 @@
 import * as yup from "yup";
 
-import { CONDICIONES } from "@/lib/producto";
+import { CONDICIONES, RESPALDOS } from "@/lib/producto";
 
 /**
  * Esquemas de validación, compartidos entre el formulario y el server action.
@@ -102,6 +102,17 @@ export const esquemaProducto = yup.object({
     .typeError("El precio tiene que ser un número.")
     .required("Hace falta el precio.")
     .positive("El precio tiene que ser mayor que cero."),
+
+  procedencia: yup
+    .string()
+    .trim()
+    .required("Di de dónde viene: es lo que la ficha promete.")
+    .max(60, "Con el país o la ciudad basta."),
+
+  garantia_respalda: yup
+    .string()
+    .oneOf(RESPALDOS, "Elige quién responde por la garantía.")
+    .required("Elige quién responde por la garantía."),
 
   stock: yup
     .number()

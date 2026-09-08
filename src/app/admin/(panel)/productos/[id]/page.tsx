@@ -70,6 +70,8 @@ export default async function PaginaEditarProducto({
           stock: producto.stock,
           dias_encargo: producto.dias_encargo,
           condicion: producto.condicion,
+          procedencia: producto.procedencia,
+          garantia_respalda: producto.garantia_respalda,
           garantia_meses: producto.garantia_meses,
           garantia_vitalicia: producto.garantia_vitalicia,
           destacado: producto.destacado,
