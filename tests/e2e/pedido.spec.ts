@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-import { borrarPedido, db, productoPorSlug, recargoActual } from "./soporte/datos";
+import {
+  borrarPedido,
+  db,
+  productoPorSlug,
+  recargoActual,
+  vaciarCarritoDe,
+} from "./soporte/datos";
+import { entrarComoAdmin } from "./soporte/sesion";
 import { agregarAlCarrito } from "./soporte/tienda";
 
 const SLUG = "corsair-vengeance-32gb-ddr5-6000";
@@ -103,6 +110,97 @@ test.describe("Pedido", () => {
       await expect(page.getByRole("heading", { name: "Todavía no hay nada" })).toBeVisible();
     } finally {
       await borrarPedido(numero);
+    }
+  });
+});
+
+test.describe("Pedido con cuenta", () => {
+  /**
+   * Quien tiene sesión no vuelve a escribir su contacto.
+   *
+   * El nombre y el correo los puso Google y el número está en el perfil, así
+   * que el formulario no los pide y el servidor los lee de ahí. Se comprueba
+   * contra lo que quedó guardado: es lo que decide a quién se le escribe.
+   */
+  test("no pide el contacto y lo toma del perfil", async ({ page }) => {
+    await entrarComoAdmin(page);
+
+    const { data: perfil } = await db
+      .from("perfiles")
+      .select("nombre, correo, whatsapp")
+      .eq("correo", "admin@apso.com.ve")
+      .single();
+
+    await agregarAlCarrito(page, SLUG);
+    await page.goto("/pedido");
+
+    // Ni un campo de contacto en pantalla: se muestran hechos.
+    await expect(page.getByLabel("Tu nombre")).toHaveCount(0);
+    await expect(page.getByLabel("Tu WhatsApp")).toHaveCount(0);
+    await expect(page.getByText(perfil!.nombre)).toBeVisible();
+    await expect(page.getByText(perfil!.whatsapp!)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /cambiar el número en mi perfil/i }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Enviar mi pedido" }).click();
+    await page.waitForURL("**/pedido/confirmado");
+
+    const titulo = await page.getByRole("heading", { level: 1 }).textContent();
+    const numero = titulo!.match(/A-\d+/)![0];
+
+    try {
+      const { data } = await db
+        .from("pedidos")
+        .select("cliente_nombre, cliente_whatsapp, cliente_correo, perfil_id")
+        .eq("numero", numero)
+        .single();
+
+      expect(data!.cliente_nombre).toBe(perfil!.nombre);
+      expect(data!.cliente_whatsapp).toBe(perfil!.whatsapp);
+      expect(data!.cliente_correo).toBe(perfil!.correo);
+      // Y queda colgado de la cuenta, que es lo que lo lleva a «Mis pedidos».
+      expect(data!.perfil_id).not.toBeNull();
+    } finally {
+      await borrarPedido(numero);
+    }
+  });
+
+  test("el número se cambia desde Mi perfil y el pedido usa el nuevo", async ({ page }) => {
+    await entrarComoAdmin(page);
+    await page.goto("/perfil");
+
+    // El nombre y el correo se ven, pero no se editan.
+    await expect(page.getByRole("heading", { name: "Mi perfil" })).toBeVisible();
+    await expect(page.getByText("admin@apso.com.ve")).toBeVisible();
+    await expect(page.getByLabel(/correo/i)).toHaveCount(0);
+
+    const original = "4246056110";
+    const nuevo = "4147778899";
+
+    await page.getByLabel("Tu WhatsApp").fill(nuevo);
+    await page.getByRole("button", { name: "Guardar número" }).click();
+    await expect(page.getByText("Número guardado")).toBeVisible();
+
+    try {
+      const { data } = await db
+        .from("perfiles")
+        .select("whatsapp")
+        .eq("correo", "admin@apso.com.ve")
+        .single();
+      expect(data!.whatsapp).toBe(`+58${nuevo}`);
+
+      // Y el pedido ya se anuncia con el número nuevo. Hace falta algo en el
+      // carrito: sin nada que pedir, esa pantalla devuelve al carrito.
+      await agregarAlCarrito(page, SLUG);
+      await page.goto("/pedido");
+      await expect(page.getByText(`+58${nuevo}`)).toBeVisible();
+    } finally {
+      await db
+        .from("perfiles")
+        .update({ whatsapp: `+58${original}` })
+        .eq("correo", "admin@apso.com.ve");
+      await vaciarCarritoDe("admin@apso.com.ve");
     }
   });
 });

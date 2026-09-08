@@ -93,6 +93,15 @@ export function MenuCuenta({
             Mis pedidos
           </Link>
 
+          <Link
+            href="/perfil"
+            role="menuitem"
+            onClick={() => setAbierto(false)}
+            className="text-texto-2 hover:bg-superficie-2 hover:text-texto block rounded-[10px] px-3 py-2 text-sm transition-colors"
+          >
+            Mi perfil
+          </Link>
+
           <form action={salirDeLaCuenta}>
             <button
               type="submit"

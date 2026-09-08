@@ -8,6 +8,8 @@ export type Sesion = {
   id: string;
   nombre: string;
   correo: string;
+  /** En E.164 (+58XXXXXXXXXX). Nulo mientras no haya completado el perfil. */
+  whatsapp: string | null;
   esAdmin: boolean;
 };
 
@@ -31,7 +33,7 @@ export async function obtenerSesion(): Promise<Sesion | null> {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre, correo, rol")
+    .select("nombre, correo, whatsapp, rol")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -41,6 +43,7 @@ export async function obtenerSesion(): Promise<Sesion | null> {
     id: user.id,
     nombre: perfil.nombre,
     correo: perfil.correo,
+    whatsapp: perfil.whatsapp,
     esAdmin: perfil.rol === "admin",
   };
 }

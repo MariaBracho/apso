@@ -247,6 +247,13 @@ export const esquemaSerial = yup.object({
 // Pedido
 // ---------------------------------------------------------------------------
 
+/**
+ * El pedido de quien compra sin cuenta.
+ *
+ * Pide los datos de contacto porque no hay perfil de dónde sacarlos, y ningún
+ * pedido puede llegar sin una forma de responderle. Registrarse después
+ * reclama estos pedidos por el WhatsApp.
+ */
 export const esquemaPedido = yup.object({
   cliente_nombre: yup
     .string()
@@ -302,6 +309,23 @@ export const esquemaPedido = yup.object({
 });
 
 export type DatosPedido = yup.InferType<typeof esquemaPedido>;
+
+/**
+ * El pedido de quien tiene cuenta.
+ *
+ * Es el mismo con el contacto descartado: el nombre y el correo los puso
+ * Google y el WhatsApp está en el perfil, así que volver a pedirlos sería
+ * hacer escribir tres veces lo mismo. `strip` y no `optional` a propósito —
+ * si algo llega en esos campos se tira, y el servidor los lee del perfil, que
+ * es la única versión en la que se puede confiar.
+ */
+export const esquemaPedidoConCuenta = esquemaPedido.shape({
+  cliente_nombre: yup.string().strip(),
+  whatsapp: yup.string().strip(),
+  cliente_correo: yup.string().strip(),
+});
+
+export type DatosPedidoConCuenta = yup.InferType<typeof esquemaPedidoConCuenta>;
 
 /**
  * Valida en el servidor y devuelve el primer error legible.

@@ -34,8 +34,15 @@ export default async function PaginaPedido() {
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_320px]">
         <FormularioPedido
-          nombre={sesion?.nombre}
-          correo={sesion?.correo}
+          cuenta={
+            sesion
+              ? {
+                  nombre: sesion.nombre,
+                  correo: sesion.correo,
+                  whatsapp: sesion.whatsapp,
+                }
+              : null
+          }
         />
 
         <aside className="lg:sticky lg:top-24 lg:self-start">

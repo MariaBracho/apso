@@ -142,6 +142,31 @@ export async function ajustarProducto(
   };
 }
 
+/**
+ * Vacía el carrito de una cuenta.
+ *
+ * El carrito de quien tiene sesión vive en la base colgado del perfil, no en la
+ * cookie, así que sobrevive al final de la prueba y se le aparece a la
+ * siguiente con cosas dentro.
+ */
+export async function vaciarCarritoDe(correo: string) {
+  const { data: perfil } = await db
+    .from("perfiles")
+    .select("id")
+    .eq("correo", correo)
+    .maybeSingle();
+  if (!perfil) return;
+
+  const { data: carrito } = await db
+    .from("carritos")
+    .select("id")
+    .eq("perfil_id", perfil.id)
+    .maybeSingle();
+  if (!carrito) return;
+
+  await db.from("carrito_items").delete().eq("carrito_id", carrito.id);
+}
+
 /** Borra un pedido y todo lo que cuelga de él. */
 export async function borrarPedido(numero: string) {
   const { data } = await db.from("pedidos").select("id").eq("numero", numero).maybeSingle();

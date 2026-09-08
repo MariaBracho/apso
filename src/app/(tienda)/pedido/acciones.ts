@@ -10,7 +10,13 @@ import {
 } from "@/lib/carrito";
 import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { preciosDe, precioSegunPago } from "@/lib/precio";
-import { type DatosPedido, esquemaPedido, validar } from "@/lib/esquemas";
+import {
+  type DatosPedido,
+  type DatosPedidoConCuenta,
+  esquemaPedido,
+  esquemaPedidoConCuenta,
+  validar,
+} from "@/lib/esquemas";
 import { avisarPedidoNuevo } from "@/lib/correo";
 import { COOKIE_PEDIDO, NOMBRE_ENTREGA, NOMBRE_PAGO } from "@/lib/pedido";
 import { obtenerSesion } from "@/lib/sesion";
@@ -30,12 +36,44 @@ export type EstadoPedido = { error: string } | undefined;
  * WhatsApp, que es donde este negocio cierra.
  */
 export async function enviarPedido(
-  datos: DatosPedido,
+  datos: DatosPedido | DatosPedidoConCuenta,
 ): Promise<EstadoPedido> {
-  const resultado = await validar(esquemaPedido, datos);
-  if (!resultado.ok) return { error: resultado.error };
+  // Con cuenta el contacto sale del perfil y el formulario ni lo pide; sin
+  // cuenta llega en el formulario, porque no hay de dónde más sacarlo. Se
+  // decide con la sesión de verdad y no con lo que diga el navegador: un
+  // server action se puede llamar sin pasar por el formulario.
+  const sesion = await obtenerSesion();
 
-  const pedido = resultado.valores;
+  let pedido: DatosPedidoConCuenta;
+  let contacto: { nombre: string; whatsapp: string; correo: string | null };
+
+  if (sesion) {
+    const resultado = await validar(esquemaPedidoConCuenta, datos);
+    if (!resultado.ok) return { error: resultado.error };
+
+    // Sin número no hay por dónde atender el pedido. Se manda a completarlo en
+    // vez de registrar algo que nadie va a poder responder.
+    if (!sesion.whatsapp) {
+      redirect(`/perfil/completar?destino=${encodeURIComponent("/pedido")}`);
+    }
+
+    pedido = resultado.valores;
+    contacto = {
+      nombre: sesion.nombre,
+      whatsapp: sesion.whatsapp,
+      correo: sesion.correo,
+    };
+  } else {
+    const resultado = await validar(esquemaPedido, datos);
+    if (!resultado.ok) return { error: resultado.error };
+
+    pedido = resultado.valores;
+    contacto = {
+      nombre: resultado.valores.cliente_nombre,
+      whatsapp: `+58${resultado.valores.whatsapp}`,
+      correo: resultado.valores.cliente_correo,
+    };
+  }
 
   const items = await leerCarrito();
   if (items.length === 0) {
@@ -80,22 +118,18 @@ export async function enviarPedido(
       )
     : null;
 
-  // Si hay sesión, el pedido queda colgado de la cuenta y aparece en «Mis
-  // pedidos». Si no, el pedido igual se registra con los datos de contacto: no
-  // hay muro de registro, y la cuenta puede llegar después.
-  const sesion = await obtenerSesion();
-
+  // Con sesión el pedido queda colgado de la cuenta y aparece en «Mis
+  // pedidos». Sin ella se registra igual: no hay muro de registro, y la cuenta
+  // puede llegar después y reclamarlo por el WhatsApp.
   const { data: creado, error: errorPedido } = await supabase
     .from("pedidos")
     .insert({
       perfil_id: sesion?.id ?? null,
-      // Con cuenta manda el nombre del perfil, no el que venga del formulario:
-      // un pedido tiene que llamarse igual que quien lo hizo. El formulario ya
-      // lo muestra fijo, pero un server action se puede llamar sin pasar por
-      // él, y esta es la comprobación que de verdad protege.
-      cliente_nombre: sesion?.nombre ?? pedido.cliente_nombre,
-      cliente_whatsapp: `+58${pedido.whatsapp}`,
-      cliente_correo: pedido.cliente_correo,
+      // El pedido guarda a quién contactar tal como estaba ese día, aunque la
+      // persona cambie de número después.
+      cliente_nombre: contacto.nombre,
+      cliente_whatsapp: contacto.whatsapp,
+      cliente_correo: contacto.correo,
       entrega: pedido.entrega,
       ciudad_destino: pedido.ciudad_destino,
       metodo_pago: pedido.metodo_pago,
@@ -146,9 +180,9 @@ export async function enviarPedido(
   after(async () => {
     await avisarPedidoNuevo({
       numero: creado.numero,
-      clienteNombre: sesion?.nombre ?? pedido.cliente_nombre,
-      clienteWhatsapp: `+58${pedido.whatsapp}`,
-      clienteCorreo: pedido.cliente_correo,
+      clienteNombre: contacto.nombre,
+      clienteWhatsapp: contacto.whatsapp,
+      clienteCorreo: contacto.correo,
       entrega: NOMBRE_ENTREGA[pedido.entrega] ?? pedido.entrega,
       ciudadDestino: pedido.ciudad_destino,
       metodoPago: NOMBRE_PAGO[pedido.metodo_pago] ?? pedido.metodo_pago,
