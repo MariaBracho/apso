@@ -169,3 +169,85 @@ export async function listarComisiones(): Promise<Vendedor[]> {
     // Primero a quien más se le debe: es a quien hay que pagarle.
     .sort((a, b) => b.totalPorPagar - a.totalPorPagar);
 }
+
+export type VentaPropia = {
+  pedidoId: string;
+  numero: string;
+  cliente: string;
+  totalUsd: number;
+  creadoEn: string;
+  /** Nula si el pedido todavía no cruzó el corte del pago. */
+  comision: { monto: number; pagada: boolean } | null;
+};
+
+export type ResumenVendedor = {
+  ventas: VentaPropia[];
+  totalVendido: number;
+  porCobrar: number;
+  cobrado: number;
+};
+
+/**
+ * Lo que vendió una persona y lo que eso le dejó.
+ *
+ * Los pedidos salen de `atendido_por` y las comisiones de la tabla, no
+ * recalculadas: el monto se congeló al venderse y esta pantalla tiene que
+ * mostrar el mismo número que la liquidación.
+ *
+ * Un pedido sin comisión no es un error — es que todavía no se ha dado por
+ * pagado. Se muestra igual, porque para quien vendió es una venta suya
+ * esperando cobrarse.
+ */
+export async function resumenDeVendedor(
+  perfilId: string,
+): Promise<ResumenVendedor> {
+  const supabase = await crearClienteServidor();
+
+  const [{ data: pedidos }, { data: comisiones }] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("id, numero, cliente_nombre, total_usd, creado_en")
+      .eq("atendido_por", perfilId)
+      .order("creado_en", { ascending: false })
+      .limit(100),
+
+    supabase
+      .from("comisiones")
+      .select("pedido_id, monto_usd, pagada_en")
+      .eq("perfil_id", perfilId),
+  ]);
+
+  const porPedido = new Map(
+    (comisiones ?? []).map((c) => [
+      c.pedido_id,
+      { monto: Number(c.monto_usd), pagada: c.pagada_en !== null },
+    ]),
+  );
+
+  const ventas: VentaPropia[] = (pedidos ?? []).map((p) => ({
+    pedidoId: p.id,
+    numero: p.numero,
+    cliente: p.cliente_nombre,
+    totalUsd: Number(p.total_usd),
+    creadoEn: p.creado_en,
+    comision: porPedido.get(p.id) ?? null,
+  }));
+
+  let porCobrar = 0;
+  let cobrado = 0;
+  for (const c of porPedido.values()) {
+    if (c.pagada) cobrado += c.monto;
+    else porCobrar += c.monto;
+  }
+
+  return {
+    ventas,
+    // Sobre lo vendido, no sobre lo cobrado: un pedido por confirmar todavía
+    // puede caerse, y decir lo contrario infla el número.
+    totalVendido: dosDecimales(
+      ventas.reduce((suma, v) => suma + v.totalUsd, 0),
+    ),
+    porCobrar: dosDecimales(porCobrar),
+    cobrado: dosDecimales(cobrado),
+  };
+}

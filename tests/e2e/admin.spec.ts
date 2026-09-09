@@ -583,3 +583,67 @@ test.describe("Quién atiende el pedido", () => {
     }
   });
 });
+
+test.describe("Mis ventas y comisiones", () => {
+  /**
+   * La vista de quien cobra, no la de quien paga.
+   *
+   * «Comisiones» agrupa por persona y sirve para liquidar; esta muestra solo
+   * lo propio. Sin ese corte, ver lo que gana otro es mirar la pantalla de al
+   * lado.
+   */
+  test("muestra las ventas propias con su comisión, y no las ajenas", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await db.rpc("mover_inventario", {
+      p_producto: producto.id, p_cantidad: 3, p_motivo: "entrada", p_costo: 60,
+    });
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Zoraida Perdomo");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4145558899");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+    const { data: pedido } = await db.from("pedidos").select("id").eq("numero", numero).single();
+
+    try {
+      await page.goto("/admin/mis-ventas");
+      await expect(page.getByRole("heading", { name: "Mis ventas y comisiones" })).toBeVisible();
+      await expect(page.getByText(numero)).toBeVisible();
+      await expect(page.getByText("por cobrar").first()).toBeVisible();
+
+      const margen = producto.precio_usd - 60;
+      const { data: ajustes } = await db.from("ajustes").select("comision_venta_pct").single();
+      const esperada = Math.round(margen * (Number(ajustes!.comision_venta_pct) / 100) * 100) / 100;
+      await expect(
+        page.getByText(`$${esperada.toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`).first(),
+      ).toBeVisible();
+
+      // Reasignado a otra persona, deja de ser una venta propia.
+      const { data: otro } = await db
+        .from("perfiles").select("id, roles").neq("correo", "admin@apso.com.ve").limit(1).single();
+      await db.from("perfiles").update({ roles: ["cliente", "vendedor"] }).eq("id", otro!.id);
+
+      try {
+        await db.from("pedidos").update({ atendido_por: otro!.id }).eq("id", pedido!.id);
+        await db.from("comisiones").update({ perfil_id: otro!.id }).eq("pedido_id", pedido!.id);
+
+        // Se comprueba que ese pedido desapareció, no que la lista quedó
+        // vacía: la cuenta puede tener otras ventas de antes.
+        await page.goto("/admin/mis-ventas");
+        await expect(page.getByText(numero)).toHaveCount(0);
+      } finally {
+        await db.from("perfiles").update({ roles: otro!.roles }).eq("id", otro!.id);
+      }
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});

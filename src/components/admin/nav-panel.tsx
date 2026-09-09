@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ENLACES = [
   { href: "/admin/pedidos", etiqueta: "Pedidos" },
   { href: "/admin/productos", etiqueta: "Inventario" },
+  { href: "/admin/mis-ventas", etiqueta: "Mis ventas" },
   { href: "/admin/comisiones", etiqueta: "Comisiones" },
   { href: "/admin/marcas", etiqueta: "Marcas" },
   { href: "/admin/tasa", etiqueta: "Tasa" },
@@ -15,8 +16,8 @@ const ENLACES = [
  * Navegación del panel.
  *
  * En columna dentro de la barra lateral del escritorio, y en fila en la barra
- * de arriba del teléfono. Son cinco enlaces: todavía caben en una fila y no
- * hace falta esconderlos detrás de un botón que hay que descubrir.
+ * de arriba del teléfono, donde la fila se desliza. Sin botón que haya que
+ * descubrir: son pocos y verlos todos es parte de saber qué hace el panel.
  */
 export function NavPanel({
   orientacion = "vertical",
