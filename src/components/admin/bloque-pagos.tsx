@@ -42,7 +42,7 @@ export function BloquePagos({
   cobrado: number;
   tasa: number | null;
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState<"cobro" | "reembolso" | null>(null);
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
@@ -54,7 +54,12 @@ export function BloquePagos({
     formState: { errors, isSubmitting },
   } = useForm<DatosPago>({
     resolver: yupResolver(esquemaPago),
-    defaultValues: { monto: 0, metodo: "efectivo", referencia: null },
+    defaultValues: {
+      tipo: "cobro",
+      monto: 0,
+      metodo: "efectivo",
+      referencia: null,
+    },
     mode: "onBlur",
   });
 
@@ -62,6 +67,11 @@ export function BloquePagos({
   const enDivisa = esPagoEnDivisa(metodo);
 
   const falta = Math.round((totalUsd - cobrado) * 100) / 100;
+
+  const abrir = (tipo: "cobro" | "reembolso") => {
+    reset({ tipo, monto: 0, metodo: "efectivo", referencia: null });
+    setAbierto(tipo);
+  };
 
   const enviar = handleSubmit(async (datos) => {
     setErrorServidor(null);
@@ -72,9 +82,16 @@ export function BloquePagos({
       return;
     }
 
-    reset({ monto: 0, metodo: datos.metodo, referencia: null });
-    setAbierto(false);
-    toast.success("Pago registrado");
+    reset({
+      tipo: datos.tipo,
+      monto: 0,
+      metodo: datos.metodo,
+      referencia: null,
+    });
+    setAbierto(null);
+    toast.success(
+      datos.tipo === "reembolso" ? "Reembolso registrado" : "Pago registrado",
+    );
   });
 
   return (
@@ -107,14 +124,27 @@ export function BloquePagos({
             )}
           </div>
 
-          {!abierto && (
-            <button
-              type="button"
-              onClick={() => setAbierto(true)}
-              className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora border px-4 py-1.5 text-xs font-semibold transition-colors"
-            >
-              Registrar pago
-            </button>
+          {abierto === null && (
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => abrir("cobro")}
+                className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora border px-4 py-1.5 text-xs font-semibold transition-colors"
+              >
+                Registrar pago
+              </button>
+              {/* Solo cuando hay algo cobrado: devolver plata que nunca entró
+                  no es un reembolso, es un error de captura. */}
+              {cobrado > 0 && (
+                <button
+                  type="button"
+                  onClick={() => abrir("reembolso")}
+                  className="text-texto-meta hover:text-error text-xs transition-colors"
+                >
+                  Devolver
+                </button>
+              )}
+            </span>
           )}
         </div>
 
@@ -126,7 +156,12 @@ export function BloquePagos({
                 className="flex flex-wrap items-baseline justify-between gap-3 py-2 text-sm"
               >
                 <span className="min-w-0">
-                  <span className="text-texto-2">
+                  <span
+                    className={
+                      pago.tipo === "reembolso" ? "text-error" : "text-texto-2"
+                    }
+                  >
+                    {pago.tipo === "reembolso" ? "Devuelto por " : ""}
                     {NOMBRE_PAGO[pago.metodo] ?? pago.metodo}
                   </span>
                   {pago.referencia && (
@@ -143,7 +178,12 @@ export function BloquePagos({
                       minimumFractionDigits: 2,
                     })}
                   </span>
-                  <span className="font-display text-texto font-semibold">
+                  <span
+                    className={`font-display font-semibold ${
+                      pago.tipo === "reembolso" ? "text-error" : "text-texto"
+                    }`}
+                  >
+                    {pago.tipo === "reembolso" ? "−" : ""}
                     {formatearUsd(pago.monto_usd)}
                   </span>
                   <button
@@ -165,12 +205,26 @@ export function BloquePagos({
           </ul>
         )}
 
-        {abierto && (
+        {abierto !== null && (
           <form
             onSubmit={enviar}
             noValidate
             className="border-borde-sutil mt-4 space-y-3 border-t pt-4"
           >
+            {/* El tipo va escrito y no en un desplegable: es la diferencia
+                entre cobrar y devolver, y no puede depender de notar cuál
+                opción quedó seleccionada. */}
+            <p
+              className={`text-xs font-semibold ${
+                abierto === "reembolso" ? "text-error" : "text-cian"
+              }`}
+            >
+              {abierto === "reembolso"
+                ? "Devolviendo dinero al cliente"
+                : "Registrando un cobro"}
+            </p>
+            <input type="hidden" {...register("tipo")} />
+
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo etiqueta="Cómo pagó" error={errors.metodo?.message}>
                 <select
@@ -235,7 +289,7 @@ export function BloquePagos({
               </button>
               <button
                 type="button"
-                onClick={() => setAbierto(false)}
+                onClick={() => setAbierto(null)}
                 className="text-texto-meta hover:text-texto text-xs transition-colors"
               >
                 Cancelar

@@ -400,6 +400,7 @@ export type Database = {
           costo_unitario_usd: number | null
           creado_en: string
           id: string
+          metodo: Database["public"]["Enums"]["metodo_pago"] | null
           motivo: Database["public"]["Enums"]["motivo_movimiento"]
           nota: string | null
           pedido_id: string | null
@@ -412,6 +413,7 @@ export type Database = {
           costo_unitario_usd?: number | null
           creado_en?: string
           id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pago"] | null
           motivo: Database["public"]["Enums"]["motivo_movimiento"]
           nota?: string | null
           pedido_id?: string | null
@@ -424,6 +426,7 @@ export type Database = {
           costo_unitario_usd?: number | null
           creado_en?: string
           id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pago"] | null
           motivo?: Database["public"]["Enums"]["motivo_movimiento"]
           nota?: string | null
           pedido_id?: string | null
@@ -467,6 +470,7 @@ export type Database = {
           referencia: string | null
           registrado_por: string | null
           tasa_cambio: number
+          tipo: Database["public"]["Enums"]["tipo_pago"]
         }
         Insert: {
           comprobante_url?: string | null
@@ -479,6 +483,7 @@ export type Database = {
           referencia?: string | null
           registrado_por?: string | null
           tasa_cambio: number
+          tipo?: Database["public"]["Enums"]["tipo_pago"]
         }
         Update: {
           comprobante_url?: string | null
@@ -491,6 +496,7 @@ export type Database = {
           referencia?: string | null
           registrado_por?: string | null
           tasa_cambio?: number
+          tipo?: Database["public"]["Enums"]["tipo_pago"]
         }
         Relationships: [
           {
@@ -972,6 +978,7 @@ export type Database = {
         Args: {
           p_cantidad: number
           p_costo?: number
+          p_metodo?: Database["public"]["Enums"]["metodo_pago"]
           p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
           p_nota?: string
           p_pedido?: string
@@ -1027,6 +1034,7 @@ export type Database = {
       respaldo_garantia: "fabricante" | "apso"
       rol_usuario: "cliente" | "admin" | "vendedor"
       tipo_entrega: "punto_fijo" | "envio_nacional"
+      tipo_pago: "cobro" | "reembolso"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1205,6 +1213,7 @@ export const Constants = {
       respaldo_garantia: ["fabricante", "apso"],
       rol_usuario: ["cliente", "admin", "vendedor"],
       tipo_entrega: ["punto_fijo", "envio_nacional"],
+      tipo_pago: ["cobro", "reembolso"],
     },
   },
 } as const

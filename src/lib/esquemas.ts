@@ -248,6 +248,10 @@ const METODOS_PAGO = [
  * tasa que se guarda al lado.
  */
 export const esquemaPago = yup.object({
+  tipo: yup
+    .string()
+    .oneOf(["cobro", "reembolso"] as const)
+    .required(),
   monto: yup
     .number()
     .transform(numeroConComa)

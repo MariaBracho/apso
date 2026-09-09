@@ -75,3 +75,40 @@ describe("saldosPorMetodo", () => {
     });
   });
 });
+
+/**
+ * La invariante de la caja: la suma de los saldos por método más lo que no
+ * tiene método tiene que dar el neto. Si eso deja de cumplirse, hay plata que
+ * se contó dos veces o que desapareció, y no hay forma de encontrarla mirando
+ * la pantalla.
+ */
+describe("la caja siempre cuadra", () => {
+  it("cobros, reembolsos, compras y gastos suman al neto", () => {
+    const r = saldosPorMetodo([
+      // Cobros.
+      { metodo: "efectivo", montoUsd: 142.8, signo: 1 },
+      { metodo: "pago_movil", montoUsd: 85.68, signo: 1 },
+      // Un reembolso: entró y volvió a salir.
+      { metodo: "efectivo", montoUsd: 71.4, signo: -1 },
+      // Compra de mercancía.
+      { metodo: "zelle", montoUsd: 152, signo: -1 },
+      // Gasto.
+      { metodo: "efectivo", montoUsd: 22, signo: -1 },
+      // Comisión liquidada, sin método.
+      { metodo: null, montoUsd: 8.4, signo: -1 },
+    ]);
+
+    expect(r.entro).toBe(228.48);
+    expect(r.salio).toBe(253.8);
+    expect(r.neto).toBe(-25.32);
+
+    const suma =
+      Object.values(r.porMetodo).reduce((a, b) => a + b, 0) + r.sinMetodo;
+    expect(suma).toBeCloseTo(r.neto, 2);
+
+    // Y cada método dice lo suyo, sin mezclarse.
+    expect(r.porMetodo.efectivo).toBe(49.4);
+    expect(r.porMetodo.pago_movil).toBe(85.68);
+    expect(r.porMetodo.zelle).toBe(-152);
+  });
+});

@@ -38,9 +38,10 @@ export default async function PaginaCaja() {
           Entró {formatearUsd(caja.entro)} · salió {formatearUsd(caja.salio)}
         </p>
         <p className="text-texto-meta mt-2 max-w-lg text-xs leading-relaxed">
-          Entra lo cobrado y verificado de cada pedido. Sale lo que anotes aquí
-          y las comisiones ya liquidadas — una comisión que se debe todavía no
-          salió de la caja.
+          Entra lo cobrado y verificado de cada pedido, menos lo devuelto. Sale
+          lo que cuesta la mercancía que compras, lo que anotes aquí y las
+          comisiones ya liquidadas — una comisión que se debe todavía no salió
+          de la caja.
         </p>
       </header>
 
@@ -58,7 +59,11 @@ export default async function PaginaCaja() {
             {formatearBs(caja.neto, tasa)}
           </p>
         )}
-        <p className="text-texto-meta mt-2 text-xs">
+        {/* La compra de mercancía va aparte de los gastos porque no es un
+            gasto: es efectivo convertido en inventario. Se vuelve costo al
+            venderse, y eso ya lo descuenta el margen. */}
+        <p className="text-texto-meta mt-2 text-xs leading-relaxed">
+          {formatearUsd(caja.comprado)} en mercancía ·{" "}
           {formatearUsd(caja.gastado)} en gastos ·{" "}
           {formatearUsd(caja.comisionesPagadas)} en comisiones pagadas
         </p>

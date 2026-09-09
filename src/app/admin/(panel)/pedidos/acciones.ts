@@ -289,6 +289,7 @@ export async function agregarExistencias(
   productoId: string,
   cantidad: number,
   costoUsd?: number | null,
+  metodo?: string | null,
   nota?: string,
 ): Promise<EstadoAccion> {
   await exigirAdmin();
@@ -310,11 +311,16 @@ export async function agregarExistencias(
     p_motivo: "entrada",
     p_nota: nota ?? null,
     p_costo: costoUsd ?? null,
+    // Con esto la compra sale de la caja. Sin método la entrada se registra
+    // igual: es preferible saber el costo sin saber de dónde salió, que no
+    // anotar nada por no tener el dato a mano.
+    p_metodo: metodo ?? null,
   });
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
   revalidatePath("/admin/productos");
+  revalidatePath("/admin/caja");
   revalidatePath("/", "layout");
   return { ok: true };
 }

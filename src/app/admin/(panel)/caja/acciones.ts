@@ -26,6 +26,10 @@ export type EstadoCaja = { error: string } | { ok: true } | undefined;
  *
  * Se guarda como verificado: lo registra quien vio la plata. El estado en
  * espera queda para cuando sea el cliente quien suba el comprobante.
+ *
+ * Sirve igual para devolver: un reembolso es la misma fila con otro tipo, y es
+ * lo que permite que un pedido cancelado después de cobrado deje de contarse
+ * como ingreso.
  */
 export async function registrarPago(
   pedidoId: string,
@@ -36,7 +40,7 @@ export async function registrarPago(
   const resultado = await validar(esquemaPago, datos);
   if (!resultado.ok) return { error: resultado.error };
 
-  const { monto, metodo, referencia } = resultado.valores;
+  const { tipo, monto, metodo, referencia } = resultado.valores;
 
   const tasa = await obtenerTasaVigente();
   if (tasa === null) {
@@ -46,6 +50,9 @@ export async function registrarPago(
   const supabase = await crearClienteServidor();
   const { error } = await supabase.from("pagos").insert({
     pedido_id: pedidoId,
+    tipo,
+    // En positivo también cuando es un reembolso: la fila dice qué es y el
+    // signo lo pone quien suma. Un «−120» en una lista de cobros se lee mal.
     monto_usd: aUsd(monto, metodo, tasa),
     metodo,
     tasa_cambio: tasa,

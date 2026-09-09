@@ -311,6 +311,10 @@ test.describe("Costo de compra", () => {
       await fila.getByRole("button", { name: new RegExp(`sumar unidades.*${producto.nombre}`, "i") }).click();
       await page.getByLabel(new RegExp(`cuántas unidades entraron de ${producto.nombre}`, "i")).fill(unidades);
       await page.getByLabel(new RegExp(`cuánto costó cada unidad de ${producto.nombre}`, "i")).fill(costo);
+      // Con costo aparece de dónde salió la plata: la compra sale de la caja.
+      await page
+        .getByLabel(new RegExp(`con qué se pagó la compra de ${producto.nombre}`, "i"))
+        .selectOption("efectivo");
       await page.keyboard.press("Enter");
       await expect(page.getByText(/entraron/)).toBeVisible();
       await page.waitForTimeout(300);
@@ -821,6 +825,108 @@ test.describe("Caja", () => {
       expect(despues).toHaveLength(0);
     } finally {
       await db.from("gastos").delete().eq("descripcion", "Aduana del lote de prueba");
+    }
+  });
+});
+
+test.describe("La caja cuadra", () => {
+  /**
+   * Comprar mercancía saca plata de la caja pero no es un gasto: es efectivo
+   * convertido en inventario, y se vuelve costo al venderse. Anotarlo como
+   * gasto restaría ese costo dos veces —una en el margen y otra aquí— y la
+   * ganancia saldría negativa siempre.
+   */
+  test("la compra de mercancía sale de la caja, aparte de los gastos", async ({ page }) => {
+    const producto = await productoPorSlug("crucial-p3-plus-1tb");
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/productos");
+
+    const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
+    await fila.getByRole("button", { name: new RegExp(`sumar unidades.*${producto.nombre}`, "i") }).click();
+    await page.getByLabel(new RegExp(`cuántas unidades entraron de ${producto.nombre}`, "i")).fill("4");
+    await page.getByLabel(new RegExp(`cuánto costó cada unidad de ${producto.nombre}`, "i")).fill("38");
+    await page.getByLabel(new RegExp(`con qué se pagó la compra de ${producto.nombre}`, "i")).selectOption("zelle");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText(/salieron de Zelle/)).toBeVisible();
+
+    try {
+      // 4 × 38 = 152 fuera de Zelle.
+      await page.goto("/admin/caja");
+      await expect(page.getByText("$152 en mercancía")).toBeVisible();
+
+      const zelle = page.getByRole("listitem").filter({ hasText: "Zelle" });
+      await expect(zelle).toContainText("$-152");
+
+      // Y no aparece como gasto: son cosas distintas.
+      await expect(page.getByText("$0 en gastos")).toBeVisible();
+    } finally {
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  /**
+   * Un pedido cobrado y luego devuelto no está cobrado. Antes el stock volvía
+   * y la comisión se borraba, pero el dinero seguía contado como ingreso y no
+   * había forma de arreglarlo desde el panel.
+   */
+  test("un reembolso descuenta lo cobrado y sale de la caja", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente devuelto");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+    const { data: pedido } = await db.from("pedidos").select("id, total_usd").eq("numero", numero).single();
+    const total = Number(pedido!.total_usd);
+
+    try {
+      // Se cobra completo.
+      await page.getByRole("button", { name: "Registrar pago" }).click();
+      await page.getByLabel(/Monto en dólares/).fill(String(total));
+      await page.getByLabel(/^Referencia/).fill("REF-COBRO-1");
+      await page.getByRole("button", { name: "Guardar pago" }).click();
+      await expect(page.getByText("Cobrado completo")).toBeVisible();
+
+      // Y se devuelve la mitad.
+      const mitad = Math.round((total / 2) * 100) / 100;
+      await page.getByRole("button", { name: "Devolver" }).click();
+      await expect(page.getByText("Devolviendo dinero al cliente")).toBeVisible();
+      await page.getByLabel(/Monto en dólares/).fill(String(mitad));
+      await page.getByLabel(/^Referencia/).fill("REF-DEVUELTA-1");
+      await page.getByRole("button", { name: "Guardar pago" }).click();
+      await expect(page.getByText("Reembolso registrado")).toBeVisible();
+
+      // Lo cobrado baja: no está cobrado lo que se devolvió.
+      await expect(page.getByText(new RegExp(`Faltan \\$${mitad}`.replace(".", "\\.")))).toBeVisible();
+
+      const { data: filas } = await db
+        .from("pagos")
+        .select("tipo, monto_usd")
+        .eq("pedido_id", pedido!.id)
+        .order("creado_en");
+      expect(filas!.map((f) => f.tipo)).toEqual(["cobro", "reembolso"]);
+      // El reembolso se guarda en positivo: el signo lo pone quien suma.
+      expect(Number(filas![1].monto_usd)).toBeGreaterThan(0);
+
+      // En la caja el neto es lo cobrado menos lo devuelto.
+      await page.goto("/admin/caja");
+      const efectivo = page.getByRole("listitem").filter({ hasText: "Efectivo" });
+      await expect(efectivo).toContainText(
+        `$${mitad.toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+      );
+    } finally {
+      await db.from("pagos").delete().eq("pedido_id", pedido!.id);
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
     }
   });
 });

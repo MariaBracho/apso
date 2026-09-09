@@ -19,6 +19,7 @@ export type PagoDePedido = {
   tasa_cambio: number;
   referencia: string | null;
   estado: string;
+  tipo: "cobro" | "reembolso";
   creado_en: string;
 };
 
@@ -36,7 +37,9 @@ export async function pagosDePedido(pedidoId: string): Promise<{
 
   const { data } = await supabase
     .from("pagos")
-    .select("id, monto_usd, metodo, tasa_cambio, referencia, estado, creado_en")
+    .select(
+      "id, monto_usd, metodo, tasa_cambio, referencia, estado, tipo, creado_en",
+    )
     .eq("pedido_id", pedidoId)
     .order("creado_en");
 
@@ -48,11 +51,16 @@ export async function pagosDePedido(pedidoId: string): Promise<{
 
   return {
     pagos,
+    // Lo devuelto se resta: un pedido cobrado y luego reembolsado no está
+    // cobrado, y sumarlo dejaría el pedido como pagado con la plata devuelta.
     cobrado:
       Math.round(
         pagos
           .filter((p) => p.estado === "verificado")
-          .reduce((suma, p) => suma + p.monto_usd, 0) * 100,
+          .reduce(
+            (suma, p) => suma + (p.tipo === "reembolso" ? -p.monto_usd : p.monto_usd),
+            0,
+          ) * 100,
       ) / 100,
   };
 }
@@ -78,6 +86,8 @@ export type ResumenCaja = {
   /** Lo que salió por gastos, separado de lo que salió por comisiones. */
   gastado: number;
   comisionesPagadas: number;
+  /** Lo que salió por comprar mercancía. No es gasto: es inventario. */
+  comprado: number;
   gastos: Gasto[];
 };
 
@@ -92,11 +102,11 @@ export type ResumenCaja = {
 export async function resumenDeCaja(): Promise<ResumenCaja> {
   const supabase = await crearClienteServidor();
 
-  const [{ data: pagos }, { data: gastos }, { data: comisiones }] =
+  const [{ data: pagos }, { data: gastos }, { data: comisiones }, { data: compras }] =
     await Promise.all([
       supabase
         .from("pagos")
-        .select("monto_usd, metodo")
+        .select("monto_usd, metodo, tipo")
         .eq("estado", "verificado"),
 
       supabase
@@ -112,14 +122,33 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
         .from("comisiones")
         .select("monto_usd")
         .not("pagada_en", "is", null),
+
+      // Comprar mercancía no es un gasto —es cambiar efectivo por inventario—
+      // pero la plata sale igual. Se resta de la caja sin tocar el margen, que
+      // ya descuenta ese mismo costo al vender.
+      supabase
+        .from("movimientos_inventario")
+        .select("cantidad, costo_unitario_usd, metodo")
+        .eq("motivo", "entrada")
+        .not("metodo", "is", null)
+        .not("costo_unitario_usd", "is", null),
     ]);
 
+  const compradoPorMetodo = (compras ?? []).map((c) => ({
+    metodo: c.metodo,
+    montoUsd:
+      Math.round(c.cantidad * Number(c.costo_unitario_usd) * 100) / 100,
+    signo: -1 as const,
+  }));
+
   const movimientos: MovimientoCaja[] = [
+    // Un reembolso guarda su monto en positivo: el signo lo pone quien suma.
     ...(pagos ?? []).map((p) => ({
       metodo: p.metodo as string,
       montoUsd: Number(p.monto_usd),
-      signo: 1 as const,
+      signo: (p.tipo === "reembolso" ? -1 : 1) as 1 | -1,
     })),
+    ...compradoPorMetodo,
     ...(gastos ?? []).map((g) => ({
       metodo: g.metodo,
       montoUsd: Number(g.monto_usd),
@@ -144,6 +173,9 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
     ),
     comisionesPagadas: dosDecimales(
       (comisiones ?? []).reduce((suma, c) => suma + Number(c.monto_usd), 0),
+    ),
+    comprado: dosDecimales(
+      compradoPorMetodo.reduce((suma, c) => suma + c.montoUsd, 0),
     ),
     gastos: (gastos ?? []).map((g) => ({
       id: g.id,
