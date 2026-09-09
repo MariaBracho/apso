@@ -25,19 +25,6 @@ export function SelectorVendedor({
 }) {
   const [pendiente, iniciar] = useTransition();
 
-  // Con una sola persona no hay nada que elegir: se dice quién es y ya.
-  if (vendedores.length < 2) {
-    const nombre =
-      vendedores.find((v) => v.id === actual)?.nombre ?? "Sin asignar";
-
-    return (
-      <div className="flex justify-between gap-3">
-        <dt className="text-texto-meta">Atendido por</dt>
-        <dd className="text-texto-2 text-right">{nombre}</dd>
-      </div>
-    );
-  }
-
   const cambiar = (perfilId: string) => {
     if (!perfilId || perfilId === actual) return;
 
@@ -60,24 +47,37 @@ export function SelectorVendedor({
   };
 
   return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-texto-meta">Atendido por</dt>
-      <dd>
-        <select
-          value={actual ?? ""}
-          disabled={pendiente}
-          onChange={(e) => cambiar(e.target.value)}
-          aria-label="Quién atiende este pedido"
-          className="bg-superficie-2 border-borde text-texto-2 focus:border-cian rounded border px-2 py-1 text-sm outline-none disabled:opacity-50"
-        >
-          {actual === null && <option value="">Sin asignar</option>}
-          {vendedores.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.nombre}
-            </option>
-          ))}
-        </select>
-      </dd>
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <dt className="text-texto-meta">Atendido por</dt>
+        <dd>
+          {/* Se dibuja aunque hoy haya una sola persona. Esconderlo hasta que
+              exista la segunda deja la función invisible justo cuando hace
+              falta descubrirla. */}
+          <select
+            value={actual ?? ""}
+            disabled={pendiente}
+            onChange={(e) => cambiar(e.target.value)}
+            aria-label="Quién atiende este pedido"
+            className="bg-superficie-2 border-borde text-texto-2 focus:border-cian rounded border px-2 py-1 text-sm outline-none disabled:opacity-50"
+          >
+            {actual === null && <option value="">Sin asignar</option>}
+            {vendedores.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.nombre}
+              </option>
+            ))}
+          </select>
+        </dd>
+      </div>
+
+      {/* Con una sola opción el desplegable no explica por qué: se dice dónde
+          salen los demás nombres. */}
+      {vendedores.length < 2 && (
+        <p className="text-texto-meta text-right text-xs">
+          Para que aparezca otra persona, dale el rol de vendedor.
+        </p>
+      )}
     </div>
   );
 }
