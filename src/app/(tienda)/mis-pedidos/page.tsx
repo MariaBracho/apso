@@ -238,7 +238,7 @@ function Vacio() {
         confirmes el mismo WhatsApp que usaste.
       </p>
       <Link
-        href="/componentes"
+        href="/todo"
         className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 mt-8 inline-block px-6 py-3 text-sm font-semibold transition-colors"
       >
         Ver la tienda

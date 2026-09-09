@@ -173,6 +173,30 @@ export async function obtenerCategoriaPorId(
 }
 
 /** Subcategorías de una categoría, para el filtro "Tipo" del sidebar. */
+/**
+ * Las secciones donde de verdad viven los productos.
+ *
+ * Las que no tienen hijas: «Memoria RAM» y «Laptops» sí, «Componentes» no,
+ * porque nada cuelga directamente de ella. Es lo que necesita el filtro de
+ * tipo en «Todo», donde no hay una categoría de la que sacar subcategorías.
+ */
+export async function obtenerCategoriasHoja(): Promise<Categoria[]> {
+  const supabase = await crearClienteServidor();
+
+  const { data, error } = await supabase
+    .from("categorias")
+    .select("id, slug, nombre, padre_id, hijas:categorias!padre_id (id)")
+    .eq("activa", true)
+    .order("orden");
+
+  avisarFallo("categorías hoja", error);
+  if (error || !data) return [];
+
+  return data
+    .filter((c) => (c.hijas as unknown as unknown[]).length === 0)
+    .map(({ id, slug, nombre, padre_id }) => ({ id, slug, nombre, padre_id }));
+}
+
 export async function obtenerSubcategorias(
   padreId: string,
 ): Promise<Categoria[]> {
@@ -215,8 +239,8 @@ export async function obtenerProductos(
     .select(CAMPOS_LISTADO)
     .eq("activo", true);
 
-  // Sin categoría se busca en toda la tienda. Es lo que hace el buscador de
-  // la barra: quien escribe «lenovo» quiere la Lenovo, no la Lenovo que
+  // Sin categoría se mira toda la tienda. Es lo que hacen el buscador de la
+  // barra y «Todo»: quien escribe «lenovo» quiere la Lenovo, no la Lenovo que
   // además esté en la sección donde se quedó parado.
   if (categoria) {
     const subcategorias = await obtenerSubcategorias(categoria.id);
@@ -232,6 +256,16 @@ export async function obtenerProductos(
 
     if (idsFiltrados.length === 0) return [];
     consulta = consulta.in("categoria_id", idsFiltrados);
+  } else if (filtros.tipos && filtros.tipos.length > 0) {
+    // En «Todo» el filtro de tipo son secciones sueltas, sin una categoría
+    // padre que las acote.
+    const secciones = await obtenerCategoriasHoja();
+    const ids = secciones
+      .filter((c) => filtros.tipos!.includes(c.slug))
+      .map((c) => c.id);
+
+    if (ids.length === 0) return [];
+    consulta = consulta.in("categoria_id", ids);
   }
 
   if (filtros.busqueda) {

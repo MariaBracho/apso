@@ -23,6 +23,11 @@ export function NavCategorias({
 }) {
   const ruta = usePathname();
 
+  // «Todo» va primero y no sale de la base: no es una categoría —ningún
+  // producto cuelga de ella— sino la forma de ver el catálogo sin separar. Es
+  // también a donde llevan el logo y los botones de «ver la tienda».
+  const secciones = [{ id: "todo", slug: "todo", nombre: "Todo" }, ...categorias];
+
   return (
     <nav
       className={
@@ -31,7 +36,7 @@ export function NavCategorias({
           : "flex flex-1 gap-2 overflow-x-auto"
       }
     >
-      {categorias.map((categoria) => {
+      {secciones.map((categoria) => {
         // Coincidencia por segmento y no `startsWith` a secas: `/laptops` no
         // debe marcarse por estar en `/laptops-gamer`, que sería otra
         // categoría.

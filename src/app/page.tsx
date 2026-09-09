@@ -54,7 +54,7 @@ export default function PaginaBienvenida() {
 
         <div className="mt-12">
           <Link
-            href="/componentes"
+            href="/todo"
             className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 inline-block px-8 py-3.5 text-sm font-semibold transition-colors"
           >
             Ver la tienda

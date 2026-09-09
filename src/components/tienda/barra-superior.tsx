@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Logo } from "@/components/marca/isotipo";
 import { BuscadorMovil } from "@/components/tienda/buscador-movil";
+import { CampoBusqueda } from "@/components/tienda/campo-busqueda";
 import { MenuCuenta } from "@/components/tienda/menu-cuenta";
 import { NavCategorias } from "@/components/tienda/nav-categorias";
 import type { Categoria } from "@/lib/catalogo";
@@ -32,21 +34,20 @@ export function BarraSuperior({
         {/* Al catálogo y no a la portada: quien ya está dentro y toca el logo
             quiere volver a los productos, no a leer otra vez de qué va la
             tienda. La portada sigue en `/` para quien llega por primera vez. */}
-        <Link href="/componentes" aria-label="apso, ver el catálogo">
+        <Link href="/todo" aria-label="apso, ver el catálogo">
           <Logo />
         </Link>
 
         <NavCategorias categorias={categorias} variante="barra" />
 
-        <form action="/buscar" className="ml-auto hidden md:block">
-          <input
-            type="search"
-            name="q"
-            placeholder="Busca RAM, gráfica, laptop…"
-            aria-label="Buscar en el catálogo"
-            className="bg-superficie-2 border-borde-sutil text-texto placeholder:text-texto-meta focus:border-cian rounded-pildora w-64 border px-4 py-2 text-sm outline-none"
-          />
-        </form>
+        {/* El campo lee la dirección para saber qué se está buscando, y eso
+            obliga a un límite de Suspense: sin él, la barra entera dejaría de
+            poder prerenderizarse. */}
+        <Suspense fallback={<div className="ml-auto hidden w-64 md:block" />}>
+          <form action="/buscar" className="ml-auto hidden md:block">
+            <CampoBusqueda clase="bg-superficie-2 border-borde-sutil text-texto placeholder:text-texto-meta focus:border-cian rounded-pildora w-64 border px-4 py-2 text-sm outline-none" />
+          </form>
+        </Suspense>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-4 md:ml-0">
           <TasaDelDia tasa={tasa} />

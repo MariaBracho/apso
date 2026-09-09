@@ -62,7 +62,7 @@ export default async function PaginaEntrar({
 
       <p className="text-texto-meta mt-6 text-xs leading-relaxed">
         No hace falta cuenta para ver el catálogo ni para armar el carrito.{" "}
-        <Link href="/componentes" className="text-cian hover:text-cian/80">
+        <Link href="/todo" className="text-cian hover:text-cian/80">
           Seguir sin cuenta
         </Link>
       </p>

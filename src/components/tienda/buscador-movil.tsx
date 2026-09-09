@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+
+import { CampoBusqueda } from "@/components/tienda/campo-busqueda";
 
 /**
  * Buscador para pantallas donde el campo no cabe en la barra.
@@ -14,13 +16,9 @@ import { useEffect, useRef, useState } from "react";
  */
 export function BuscadorMovil() {
   const [abierto, setAbierto] = useState(false);
-  const campo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!abierto) return;
-
-    // Enfocar al abrir: si hubo que tocar la lupa, lo siguiente es escribir.
-    campo.current?.focus();
 
     const alEscapar = (evento: KeyboardEvent) => {
       if (evento.key === "Escape") setAbierto(false);
@@ -50,14 +48,12 @@ export function BuscadorMovil() {
       action="/buscar"
       className="bg-fondo absolute inset-x-0 top-0 z-40 flex h-16 items-center gap-2 px-6 md:hidden"
     >
-      <input
-        ref={campo}
-        type="search"
-        name="q"
-        placeholder="Busca RAM, gráfica, laptop…"
-        aria-label="Buscar en el catálogo"
-        className="bg-superficie-2 border-borde-sutil text-texto placeholder:text-texto-meta focus:border-cian rounded-pildora min-w-0 flex-1 border px-4 py-2 text-sm outline-none"
-      />
+      <Suspense fallback={<div className="min-w-0 flex-1" />}>
+        <CampoBusqueda
+          autoFocus
+          clase="bg-superficie-2 border-borde-sutil text-texto placeholder:text-texto-meta focus:border-cian rounded-pildora min-w-0 flex-1 border px-4 py-2 text-sm outline-none"
+        />
+      </Suspense>
       <button
         type="button"
         onClick={() => setAbierto(false)}

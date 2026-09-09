@@ -16,7 +16,7 @@ export default async function PaginaConfirmado() {
   // dirección: así nadie ve el pedido de otro probando números correlativos.
   const almacen = await cookies();
   const pedidoId = almacen.get(COOKIE_PEDIDO)?.value;
-  if (!pedidoId) redirect("/componentes");
+  if (!pedidoId) redirect("/todo");
 
   const supabase = crearClienteServicio();
 
@@ -30,7 +30,7 @@ export default async function PaginaConfirmado() {
     .eq("id", pedidoId)
     .maybeSingle();
 
-  if (!pedido) redirect("/componentes");
+  if (!pedido) redirect("/todo");
 
   const items = (pedido.items ?? []) as Array<{
     nombre_producto: string;
@@ -80,7 +80,7 @@ export default async function PaginaConfirmado() {
 
       <div className="mt-10 text-center">
         <Link
-          href="/componentes"
+          href="/todo"
           className="text-texto-2 hover:text-texto text-sm transition-colors"
         >
           Seguir viendo la tienda

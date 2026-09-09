@@ -106,6 +106,63 @@ test.describe("Catálogo", () => {
     }
   });
 
+  /**
+   * Busca sola mientras se escribe, sin pulsar Enter.
+   *
+   * Y no apila una entrada de historial por cada pausa: se entra a la búsqueda
+   * una vez y de ahí en adelante se reemplaza, así «atrás» devuelve a la
+   * sección donde estaba y no recorre letra por letra.
+   */
+  test("el buscador consulta solo al dejar de escribir", async ({ page }) => {
+    const lenovo = await productoPorSlug("lenovo-ideapad-slim-3-15");
+
+    await page.goto("/laptops");
+    await page.getByRole("searchbox").first().fill("lenovo");
+
+    await page.waitForURL(/\/buscar\?q=lenovo/, { timeout: 5_000 });
+    await expect(
+      page.getByRole("heading", { name: new RegExp(lenovo.nombre, "i") }),
+    ).toBeVisible();
+
+    // Afinar la búsqueda no agrega historial: atrás vuelve a la sección.
+    await page.getByRole("searchbox").first().fill("thinkpad");
+    await page.waitForURL(/\/buscar\?q=thinkpad/, { timeout: 5_000 });
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/laptops/);
+  });
+
+  /**
+   * «Todo» no es una categoría: ningún producto cuelga de ella. Es la forma de
+   * ver el catálogo sin obligar a adivinar si lo que se busca es un componente
+   * o una laptop, y es a donde llevan el logo y «ver la tienda».
+   */
+  test("«Todo» muestra el catálogo entero y filtra igual", async ({ page }) => {
+    await page.goto("/componentes");
+    const enComponentes = await page.locator("main h3").count();
+
+    await page.getByRole("link", { name: "Todo", exact: true }).first().click();
+    await page.waitForURL(/\/todo/);
+
+    await expect(page.locator('header nav a[aria-current="page"]').first()).toHaveText("Todo");
+    const enTodo = await page.locator("main h3").count();
+    expect(enTodo).toBeGreaterThan(enComponentes);
+
+    // Los filtros siguen funcionando sin una categoría que los acote.
+    await page.getByRole("checkbox", { name: /laptops/i }).first().check();
+    await page.waitForURL(/tipo=laptops/);
+    await expect(page.locator("main h3").first()).toBeVisible();
+    expect(await page.locator("main h3").count()).toBeLessThan(enTodo);
+  });
+
+  test("el logo lleva al catálogo entero", async ({ page }) => {
+    await page.goto("/componentes");
+    await page.getByRole("link", { name: /apso, ver el catálogo/i }).click();
+
+    await page.waitForURL(/\/todo/);
+    await expect(page.getByRole("heading", { name: "Todo el catálogo" })).toBeVisible();
+  });
+
   test("una búsqueda sin resultados ofrece las dos secciones", async ({ page }) => {
     await page.goto("/buscar?q=zzzznoexiste");
 
