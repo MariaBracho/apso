@@ -122,9 +122,16 @@ export async function cambiarEstado(
 /**
  * Suma o resta al inventario las unidades de un pedido.
  *
- * Devuelve un mensaje si algo falla, o null si salió bien. No bloquea cuando
- * el stock queda corto: el inventario real lo cuenta una persona, y el panel
- * no puede negarse a registrar una venta que ya ocurrió.
+ * Devuelve un mensaje si algo falla, o null si salió bien. Que el stock quede
+ * corto no es fallo: la función nunca baja de cero, porque el inventario real
+ * lo cuenta una persona y el panel no puede negarse a registrar una venta que
+ * ya ocurrió.
+ *
+ * Un error de la llamada sí corta. Antes se ignoraba, y cuando una migración
+ * dejó dos versiones de `mover_inventario` cargadas a la vez, la llamada
+ * empezó a fallar y el stock dejó de bajar sin que nada lo dijera: el pedido
+ * quedaba marcado como descontado y el almacén no se había movido. Un error
+ * que nadie mira es un descuadre esperando.
  */
 async function ajustarInventario(
   pedidoId: string,
@@ -145,12 +152,16 @@ async function ajustarInventario(
     // Por `mover_inventario` y no actualizando el stock a mano: así el cambio
     // y su registro ocurren en la misma transacción, y el historial del
     // producto explica de qué pedido salió cada unidad.
-    await supabase.rpc("mover_inventario", {
+    const { error } = await supabase.rpc("mover_inventario", {
       p_producto: item.producto_id,
       p_cantidad: descontar ? -item.cantidad : item.cantidad,
       p_motivo: descontar ? "venta" : "devolucion",
       p_pedido: pedidoId,
     });
+
+    if (error) {
+      return `No se pudo mover el inventario: ${error.message}. El pedido no cambió de estado.`;
+    }
   }
 
   revalidatePath("/admin/productos");
@@ -247,15 +258,22 @@ export async function ajustarStock(
 }
 
 /**
- * Suma existencias que acaban de llegar.
+ * Suma existencias que acaban de llegar, con lo que costaron.
  *
  * Es distinto de corregir el total: aquí se dice cuántas entraron, que es como
  * se piensa al recibir mercancía, y el historial queda diciendo «entraron 5»
  * en vez de «alguien cambió el número a 6».
+ *
+ * El costo se pide aquí y no en el producto porque cambia en cada viaje, y es
+ * el único momento en que se sabe: seis meses después nadie recuerda a cuánto
+ * salió el lote que ya se vendió. Sigue siendo opcional — es preferible una
+ * entrada sin costo que una entrada que no se registra por no tener el dato a
+ * mano.
  */
 export async function agregarExistencias(
   productoId: string,
   cantidad: number,
+  costoUsd?: number | null,
   nota?: string,
 ): Promise<EstadoAccion> {
   await exigirAdmin();
@@ -264,12 +282,19 @@ export async function agregarExistencias(
     return { error: "Escribe cuántas unidades entraron, mínimo una." };
   }
 
+  if (costoUsd !== undefined && costoUsd !== null) {
+    if (!Number.isFinite(costoUsd) || costoUsd < 0) {
+      return { error: "El costo tiene que ser un número, cero o más." };
+    }
+  }
+
   const supabase = await crearClienteServidor();
   const { error } = await supabase.rpc("mover_inventario", {
     p_producto: productoId,
     p_cantidad: cantidad,
     p_motivo: "entrada",
     p_nota: nota ?? null,
+    p_costo: costoUsd ?? null,
   });
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };

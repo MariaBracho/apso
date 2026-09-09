@@ -29,6 +29,7 @@ export function EditorStock({
   const [editando, setEditando] = useState(false);
   const [entrando, setEntrando] = useState(false);
   const [llegaron, setLlegaron] = useState("");
+  const [costo, setCosto] = useState("");
   const [pendiente, iniciar] = useTransition();
 
   /**
@@ -41,13 +42,16 @@ export function EditorStock({
    */
   const sumar = () => {
     const cuantas = Number(llegaron);
+    // Vacío es «no lo sé ahora», que no es lo mismo que cero.
+    const cuanto = costo.trim() === "" ? null : Number(costo.replace(",", "."));
     setEntrando(false);
     setLlegaron("");
+    setCosto("");
 
     if (!cuantas || pendiente) return;
 
     iniciar(async () => {
-      const resultado = await agregarExistencias(id, cuantas);
+      const resultado = await agregarExistencias(id, cuantas, cuanto);
       if (resultado && "error" in resultado) {
         toast.error(resultado.error);
         return;
@@ -55,6 +59,9 @@ export function EditorStock({
 
       toast.success(
         `${nombre}: entraron ${cuantas}, quedan ${stock + cuantas}`,
+        cuanto === null
+          ? { description: "Sin costo cargado: no vas a poder ver el margen." }
+          : undefined,
       );
     });
   };
@@ -79,6 +86,17 @@ export function EditorStock({
   };
 
   if (entrando) {
+    const cancelar = () => {
+      setEntrando(false);
+      setLlegaron("");
+      setCosto("");
+    };
+
+    /* El costo se pide aquí porque es el único momento en que se sabe: cambia
+       en cada viaje y seis meses después nadie recuerda a cuánto salió el lote
+       que ya se vendió. Se confirma con Enter desde cualquiera de los dos, y
+       solo el blur del segundo cierra — si cerrara el primero, pasar de las
+       unidades al costo guardaría la entrada a medias. */
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="text-texto-meta text-xs">+</span>
@@ -91,14 +109,25 @@ export function EditorStock({
           onChange={(e) => setLlegaron(e.target.value.replace(/[^0-9]/g, ""))}
           onKeyDown={(e) => {
             if (e.key === "Enter") sumar();
-            if (e.key === "Escape") {
-              setEntrando(false);
-              setLlegaron("");
-            }
+            if (e.key === "Escape") cancelar();
           }}
-          onBlur={sumar}
           aria-label={`Cuántas unidades entraron de ${nombre}`}
           className="bg-superficie-2 border-exito text-texto w-14 rounded border px-2 py-0.5 text-right text-sm outline-none"
+        />
+        <span className="text-texto-meta text-xs">a $</span>
+        <input
+          value={costo}
+          inputMode="decimal"
+          disabled={pendiente}
+          placeholder="c/u"
+          onChange={(e) => setCosto(e.target.value.replace(/[^0-9.,]/g, ""))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sumar();
+            if (e.key === "Escape") cancelar();
+          }}
+          onBlur={sumar}
+          aria-label={`Cuánto costó cada unidad de ${nombre}`}
+          className="bg-superficie-2 border-exito text-texto w-16 rounded border px-2 py-0.5 text-right text-sm outline-none"
         />
       </span>
     );

@@ -22,24 +22,41 @@ export type ProductoAdmin = {
   destacado: boolean;
   categoria: { slug: string; nombre: string } | null;
   marca: { nombre: string } | null;
+  /** Promedio ponderado de las entradas con costo. Nulo si no hay ninguna. */
+  costo_promedio_usd: number | null;
 };
 
 export async function listarProductos(): Promise<ProductoAdmin[]> {
   const supabase = await crearClienteServidor();
 
-  const { data, error } = await supabase
-    .from("productos")
-    .select(
-      `id, slug, nombre, precio_usd, stock, dias_encargo,
-       activo, destacado,
-       categoria:categorias (slug, nombre),
-       marca:marcas (nombre)`,
-    )
-    .order("nombre")
-    .returns<ProductoAdmin[]>();
+  // El costo vive en una vista aparte y no en `productos`, así que se pide en
+  // paralelo y se une aquí. Es una consulta más a cambio de no tener el costo
+  // duplicado en la tabla, donde se iría quedando viejo.
+  const [{ data, error }, { data: costos }] = await Promise.all([
+    supabase
+      .from("productos")
+      .select(
+        `id, slug, nombre, precio_usd, stock, dias_encargo,
+         activo, destacado,
+         categoria:categorias (slug, nombre),
+         marca:marcas (nombre)`,
+      )
+      .order("nombre")
+      .returns<Omit<ProductoAdmin, "costo_promedio_usd">[]>(),
+
+    supabase.from("costos_producto").select("producto_id, costo_promedio_usd"),
+  ]);
 
   if (error || !data) return [];
-  return data;
+
+  const porProducto = new Map(
+    (costos ?? []).map((c) => [c.producto_id, Number(c.costo_promedio_usd)]),
+  );
+
+  return data.map((producto) => ({
+    ...producto,
+    costo_promedio_usd: porProducto.get(producto.id) ?? null,
+  }));
 }
 
 export async function obtenerProductoAdmin(id: string) {
@@ -263,6 +280,7 @@ export type MovimientoInventario = {
   cantidad: number;
   stock_resultante: number;
   motivo: "entrada" | "venta" | "devolucion" | "ajuste";
+  costo_unitario_usd: number | null;
   nota: string | null;
   creado_en: string;
   pedido: { numero: string } | null;
@@ -283,7 +301,7 @@ export async function listarMovimientos(
   const { data } = await supabase
     .from("movimientos_inventario")
     .select(
-      `id, cantidad, stock_resultante, motivo, nota, creado_en,
+      `id, cantidad, stock_resultante, motivo, costo_unitario_usd, nota, creado_en,
        pedido:pedidos (numero),
        perfil:perfiles (nombre)`,
     )

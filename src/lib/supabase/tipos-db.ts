@@ -276,6 +276,7 @@ export type Database = {
       movimientos_inventario: {
         Row: {
           cantidad: number
+          costo_unitario_usd: number | null
           creado_en: string
           id: string
           motivo: Database["public"]["Enums"]["motivo_movimiento"]
@@ -287,6 +288,7 @@ export type Database = {
         }
         Insert: {
           cantidad: number
+          costo_unitario_usd?: number | null
           creado_en?: string
           id?: string
           motivo: Database["public"]["Enums"]["motivo_movimiento"]
@@ -298,6 +300,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          costo_unitario_usd?: number | null
           creado_en?: string
           id?: string
           motivo?: Database["public"]["Enums"]["motivo_movimiento"]
@@ -820,20 +823,47 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      costos_producto: {
+        Row: {
+          costo_promedio_usd: number | null
+          producto_id: string | null
+          unidades_con_costo: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       es_admin: { Args: never; Returns: boolean }
-      mover_inventario: {
-        Args: {
-          p_cantidad: number
-          p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
-          p_nota?: string
-          p_pedido?: string
-          p_producto: string
-        }
-        Returns: number
-      }
+      mover_inventario:
+        | {
+            Args: {
+              p_cantidad: number
+              p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
+              p_nota?: string
+              p_pedido?: string
+              p_producto: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_cantidad: number
+              p_costo?: number
+              p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
+              p_nota?: string
+              p_pedido?: string
+              p_producto: string
+            }
+            Returns: number
+          }
       reclamar_pedidos_por_whatsapp: { Args: never; Returns: number }
       tasa_vigente: { Args: never; Returns: number }
     }

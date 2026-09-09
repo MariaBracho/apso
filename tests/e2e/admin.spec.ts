@@ -289,3 +289,83 @@ test.describe("Ventas fuera de la web", () => {
     await expect(page).toHaveURL(/\/admin\/pedidos\/nuevo/);
   });
 });
+
+test.describe("Costo de compra", () => {
+  /**
+   * El costo se carga al recibir la mercancía porque es el único momento en
+   * que se sabe. Y se promedia ponderado: dos entradas a distinto precio no
+   * dan la media simple de las dos.
+   */
+  test("dos entradas a distinto costo dan un promedio ponderado", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/productos");
+
+    const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
+
+    // Cuatro a $50 y una a $100: el promedio es 60, no 75.
+    for (const [unidades, costo] of [["4", "50"], ["1", "100"]] as const) {
+      await fila.getByRole("button", { name: new RegExp(`sumar unidades.*${producto.nombre}`, "i") }).click();
+      await page.getByLabel(new RegExp(`cuántas unidades entraron de ${producto.nombre}`, "i")).fill(unidades);
+      await page.getByLabel(new RegExp(`cuánto costó cada unidad de ${producto.nombre}`, "i")).fill(costo);
+      await page.keyboard.press("Enter");
+      await expect(page.getByText(/entraron/)).toBeVisible();
+      await page.waitForTimeout(300);
+    }
+
+    try {
+      const { data } = await db
+        .from("costos_producto")
+        .select("costo_promedio_usd, unidades_con_costo")
+        .eq("producto_id", producto.id)
+        .single();
+
+      expect(Number(data!.costo_promedio_usd)).toBeCloseTo(60, 2);
+      expect(data!.unidades_con_costo).toBe(5);
+
+      // Y el margen sale en el inventario, contra el precio en divisas.
+      await page.reload();
+      const margen = producto.precio_usd - 60;
+      const porcentaje = Math.round((margen / producto.precio_usd) * 100);
+      await expect(fila).toContainText(`${porcentaje} %`);
+    } finally {
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  test("una entrada sin costo se registra igual, y el margen dice que falta", async ({ page }) => {
+    const producto = await productoPorSlug("crucial-p3-plus-1tb");
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/productos");
+
+    const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
+    // Sin costo cargado no hay margen que mostrar, y se dice en vez de
+    // dibujar un número inventado.
+    await expect(fila).toContainText("Sin costo");
+
+    await fila.getByRole("button", { name: new RegExp(`sumar unidades.*${producto.nombre}`, "i") }).click();
+    await page.getByLabel(new RegExp(`cuántas unidades entraron de ${producto.nombre}`, "i")).fill("2");
+    await page.keyboard.press("Enter");
+
+    // Se registra igual: es preferible una entrada sin costo que una entrada
+    // que no se anota por no tener el dato a mano.
+    await expect(page.getByText("Sin costo cargado: no vas a poder ver el margen.")).toBeVisible();
+
+    try {
+      const { data } = await db
+        .from("productos")
+        .select("stock")
+        .eq("id", producto.id)
+        .single();
+      expect(data!.stock).toBe(antes + 2);
+    } finally {
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});

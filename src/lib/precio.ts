@@ -70,3 +70,34 @@ export function precioSegunPago(precios: Precios, metodo: string): number {
 export function aDivisa(precioBolivares: number, recargoPct: number): number {
   return precioBolivares / (1 + recargoPct / 100);
 }
+
+export type Margen = {
+  /** Lo que queda por unidad, en dólares. */
+  monto: number;
+  /** Sobre el precio de venta, que es como se lee un margen de tienda. */
+  porcentaje: number;
+};
+
+/**
+ * Cuánto se gana con una unidad.
+ *
+ * Contra el precio en divisas, que es el más bajo de los dos: si el margen da
+ * bien ahí, da bien cobrando en bolívares. Al revés se vería un margen que
+ * desaparece en cuanto alguien paga en efectivo.
+ *
+ * Devuelve null sin costo cargado. Un margen inventado es peor que ninguno:
+ * con él se decide qué comprar y a cuánto vender.
+ */
+export function margenDe(
+  precioDivisa: number,
+  costoUsd: number | null,
+): Margen | null {
+  if (costoUsd === null || precioDivisa <= 0) return null;
+
+  const monto = Math.round((precioDivisa - costoUsd) * 100) / 100;
+
+  return {
+    monto,
+    porcentaje: Math.round((monto / precioDivisa) * 100),
+  };
+}

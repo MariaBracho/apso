@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   aDivisa,
   esPagoEnDivisa,
+  margenDe,
   precioSegunPago,
   preciosDe,
 } from "@/lib/precio";
@@ -87,5 +88,38 @@ describe("aDivisa", () => {
 
   it("sin recargo no cambia nada", () => {
     expect(aDivisa(150, 0)).toBe(150);
+  });
+});
+
+describe("margenDe", () => {
+  it("es la diferencia contra el costo, y el porcentaje va sobre la venta", () => {
+    const margen = margenDe(120, 78);
+
+    expect(margen?.monto).toBe(42);
+    // 42 de 120, no 42 de 78: es como se lee un margen de tienda.
+    expect(margen?.porcentaje).toBe(35);
+  });
+
+  /**
+   * Sin costo cargado no se inventa un margen. Con él se decide qué comprar y
+   * a cuánto vender, así que uno inventado es peor que ninguno.
+   */
+  it("sin costo no hay margen que mostrar", () => {
+    expect(margenDe(120, null)).toBeNull();
+  });
+
+  it("avisa cuando se está vendiendo por debajo del costo", () => {
+    const margen = margenDe(100, 130);
+
+    expect(margen?.monto).toBe(-30);
+    expect(margen?.porcentaje).toBe(-30);
+  });
+
+  it("con costo cero el margen es todo el precio, no un error", () => {
+    expect(margenDe(50, 0)).toEqual({ monto: 50, porcentaje: 100 });
+  });
+
+  it("un precio en cero no divide entre cero", () => {
+    expect(margenDe(0, 10)).toBeNull();
   });
 });

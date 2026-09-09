@@ -3,11 +3,11 @@ import Link from "next/link";
 
 import { EditorStock } from "@/components/admin/editor-stock";
 import { InterruptorPublicado } from "@/components/admin/interruptor-publicado";
-import { listarProductos } from "@/lib/admin";
+import { type ProductoAdmin, listarProductos } from "@/lib/admin";
 import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { disponibilidadDe } from "@/lib/producto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
-import { preciosDe } from "@/lib/precio";
+import { margenDe, preciosDe } from "@/lib/precio";
 
 export const metadata: Metadata = { title: "Inventario" };
 
@@ -80,8 +80,11 @@ export default async function PaginaInventario() {
 
                   {/* En verde y en ámbar como en la tienda, para que el color
                       signifique lo mismo en los dos lados. */}
-                  <td className="text-exito font-display px-4 py-3 text-right whitespace-nowrap">
-                    {formatearUsd(producto.precio_usd)}
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <p className="text-exito font-display">
+                      {formatearUsd(producto.precio_usd)}
+                    </p>
+                    <MargenDelProducto producto={producto} />
                   </td>
 
                   <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -157,6 +160,32 @@ function PrecioBcv({
         {tasa === null ? "Sin tasa cargada" : formatearBs(bolivares, tasa)}
       </p>
     </>
+  );
+}
+
+/**
+ * Lo que se gana con una unidad, debajo del precio en divisas.
+ *
+ * Va contra ese y no contra el de bolívares porque es el más bajo: si el
+ * margen da bien ahí, da bien cobrando de la otra forma. Sin costo cargado no
+ * se dibuja un número — se dice que falta, que es lo accionable.
+ */
+function MargenDelProducto({ producto }: { producto: ProductoAdmin }) {
+  const margen = margenDe(producto.precio_usd, producto.costo_promedio_usd);
+
+  if (!margen) {
+    return <p className="text-texto-meta text-xs">Sin costo</p>;
+  }
+
+  // Vender por debajo del costo no es un margen pequeño, es una pérdida, y
+  // tiene que saltar a la vista sin leer el número.
+  const perdiendo = margen.monto < 0;
+
+  return (
+    <p className={`text-xs ${perdiendo ? "text-error" : "text-texto-meta"}`}>
+      {perdiendo ? "−" : "+"}
+      {formatearUsd(Math.abs(margen.monto))} · {margen.porcentaje} %
+    </p>
   );
 }
 

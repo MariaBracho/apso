@@ -1,4 +1,5 @@
 import type { MovimientoInventario } from "@/lib/admin";
+import { formatearUsd } from "@/lib/formato";
 
 /**
  * Historial de inventario de un producto.
@@ -47,6 +48,15 @@ export function HistorialInventario({
             <span className="text-texto-2">{ETIQUETA[m.motivo]}</span>
             {m.pedido && (
               <span className="text-texto-meta"> · {m.pedido.numero}</span>
+            )}
+            {/* El costo del lote, junto a la entrada que lo trajo. Es lo que
+                deja ver que el promedio subió porque un viaje salió más caro,
+                y no porque alguien se equivocó al cargarlo. */}
+            {m.costo_unitario_usd !== null && (
+              <span className="text-texto-meta">
+                {" "}
+                · a {formatearUsd(Number(m.costo_unitario_usd))} c/u
+              </span>
             )}
             {m.nota && (
               <span className="text-texto-meta block text-xs">{m.nota}</span>

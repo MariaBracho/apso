@@ -8,7 +8,10 @@ try {
   // Sin .env las pruebas fallan con un mensaje claro en `soporte/datos.ts`.
 }
 
-const PUERTO = 3000;
+// 3000 por defecto, que es donde corre `pnpm dev`. Se puede mover con PORT
+// para cuando otro proyecto ya tiene ese puerto tomado: sin esto, Playwright
+// reutiliza lo que encuentre ahí y termina probando otra aplicación.
+const PUERTO = Number(process.env.PORT) || 3000;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -28,6 +31,11 @@ export default defineConfig({
   expect: { timeout: 15_000 },
 
   reporter: process.env.CI ? "github" : "list",
+
+  // Comprueba que al otro lado esté apso y no cualquier cosa escuchando en el
+  // puerto. Sin esto el fallo aparece como «no encuentro el botón de entrar»
+  // en cada prueba, y se pierde media hora buscándolo en el sitio equivocado.
+  globalSetup: "./tests/e2e/soporte/servidor.ts",
 
   use: {
     baseURL: `http://localhost:${PUERTO}`,
@@ -55,7 +63,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "pnpm dev",
+    command: `pnpm dev --port ${PUERTO}`,
     url: `http://localhost:${PUERTO}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
