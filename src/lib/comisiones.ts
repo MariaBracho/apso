@@ -101,16 +101,43 @@ export type Vendedor = {
   pagadas: ComisionDeVendedor[];
   totalPorPagar: number;
   totalPagado: number;
+  /** Pedidos atendidos, sin contar los cancelados. */
+  pedidos: number;
+  /** Lo que suman esos pedidos. */
+  totalVendido: number;
+  /** Margen que dejaron las ventas ya cerradas. */
+  margenGenerado: number;
 };
 
+/** Un pedido cancelado no es una venta: contarlo infla el acumulado. */
+const CANCELADOS = ["cancelado", "cancelado_reembolsado"];
+
 /**
- * Las comisiones agrupadas por quien las ganó.
+ * Lo que lleva vendido cada persona y lo que se le debe.
  *
- * Se agrupa aquí y no en la consulta porque la pregunta que se hace en esta
- * pantalla es «¿cuánto le debo a cada quien?», y esa respuesta es por persona.
+ * Se agrupa aquí y no en la consulta porque las dos preguntas de esta pantalla
+ * —cuánto lleva vendido cada quien y cuánto hay que pagarle— se responden por
+ * persona.
  */
 export async function listarComisiones(): Promise<Vendedor[]> {
   const supabase = await crearClienteServidor();
+
+  const { data: atendidos } = await supabase
+    .from("pedidos")
+    .select("atendido_por, total_usd")
+    .not("atendido_por", "is", null)
+    .not("estado", "in", `(${CANCELADOS.join(",")})`);
+
+  const ventas = new Map<string, { pedidos: number; total: number }>();
+  for (const pedido of atendidos ?? []) {
+    const acumulado = ventas.get(pedido.atendido_por!) ?? {
+      pedidos: 0,
+      total: 0,
+    };
+    acumulado.pedidos += 1;
+    acumulado.total += Number(pedido.total_usd);
+    ventas.set(pedido.atendido_por!, acumulado);
+  }
 
   const { data } = await supabase
     .from("comisiones")
@@ -136,6 +163,9 @@ export async function listarComisiones(): Promise<Vendedor[]> {
       pagadas: [],
       totalPorPagar: 0,
       totalPagado: 0,
+      pedidos: ventas.get(fila.perfil_id)?.pedidos ?? 0,
+      totalVendido: dosDecimales(ventas.get(fila.perfil_id)?.total ?? 0),
+      margenGenerado: 0,
     };
 
     const comision: ComisionDeVendedor = {
@@ -148,6 +178,8 @@ export async function listarComisiones(): Promise<Vendedor[]> {
       pagada_en: fila.pagada_en,
       pedido: fila.pedido as unknown as ComisionDeVendedor["pedido"],
     };
+
+    vendedor.margenGenerado += comision.margen_usd;
 
     if (comision.pagada_en === null) {
       vendedor.porPagar.push(comision);
@@ -165,6 +197,7 @@ export async function listarComisiones(): Promise<Vendedor[]> {
       ...v,
       totalPorPagar: dosDecimales(v.totalPorPagar),
       totalPagado: dosDecimales(v.totalPagado),
+      margenGenerado: dosDecimales(v.margenGenerado),
     }))
     // Primero a quien más se le debe: es a quien hay que pagarle.
     .sort((a, b) => b.totalPorPagar - a.totalPorPagar);
@@ -208,6 +241,7 @@ export async function resumenDeVendedor(
       .from("pedidos")
       .select("id, numero, cliente_nombre, total_usd, creado_en")
       .eq("atendido_por", perfilId)
+      .not("estado", "in", `(${CANCELADOS.join(",")})`)
       .order("creado_en", { ascending: false })
       .limit(100),
 

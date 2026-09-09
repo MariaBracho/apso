@@ -7,7 +7,7 @@ const ENLACES = [
   { href: "/admin/pedidos", etiqueta: "Pedidos" },
   { href: "/admin/productos", etiqueta: "Inventario" },
   { href: "/admin/mis-ventas", etiqueta: "Mis ventas" },
-  { href: "/admin/comisiones", etiqueta: "Comisiones" },
+  { href: "/admin/vendedores", etiqueta: "Vendedores" },
   { href: "/admin/marcas", etiqueta: "Marcas" },
   { href: "/admin/tasa", etiqueta: "Tasa" },
 ];

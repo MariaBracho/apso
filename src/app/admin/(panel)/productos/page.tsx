@@ -22,6 +22,13 @@ export default async function PaginaInventario() {
     (p) => p.activo && disponibilidadDe(p) === "sin_stock",
   ).length;
 
+  // Sin costo no hay margen, y sin margen no hay comisión que mostrar. La fila
+  // dice «Sin costo» pero no dice qué hacer con eso, y en una tabla donde
+  // todas lo dicen se lee como que la función no existe.
+  const sinCosto = productos.filter(
+    (p) => p.costo_promedio_usd === null,
+  ).length;
+
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
       <header className="mb-8 flex items-end justify-between gap-4">
@@ -33,6 +40,17 @@ export default async function PaginaInventario() {
             {productos.length} productos
             {sinStock > 0 && ` · ${sinStock} sin stock y sin plazo`}
           </p>
+
+          {sinCosto > 0 && (
+            <p className="text-texto-meta mt-1.5 max-w-lg text-xs leading-relaxed">
+              {sinCosto === productos.length
+                ? "Ninguno tiene el costo de compra cargado"
+                : `${sinCosto} sin costo de compra`}
+              , así que no se puede calcular margen ni comisión. Se carga con el{" "}
+              <span className="text-texto-2">+</span> de la columna Stock, al
+              recibir mercancía.
+            </p>
+          )}
         </div>
 
         <Link

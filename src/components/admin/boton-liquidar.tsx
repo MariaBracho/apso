@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { liquidarComisiones } from "@/app/admin/(panel)/comisiones/acciones";
+import { liquidarComisiones } from "@/app/admin/(panel)/vendedores/acciones";
 import { formatearUsd } from "@/lib/formato";
 
 /**

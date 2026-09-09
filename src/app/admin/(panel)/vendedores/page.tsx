@@ -6,16 +6,19 @@ import { obtenerTasaVigente } from "@/lib/catalogo";
 import { type ComisionDeVendedor, listarComisiones } from "@/lib/comisiones";
 import { formatearBs, formatearUsd } from "@/lib/formato";
 
-export const metadata: Metadata = { title: "Comisiones" };
+export const metadata: Metadata = { title: "Vendedores" };
 
 /**
- * Lo que se le debe a cada quien, y lo que ya se le pagó.
+ * Cuánto lleva vendido cada quien y cuánto se le debe.
  *
- * Los montos salen congelados de cuando se cerró cada venta, no del costo de
- * hoy. Es la diferencia con el número del inventario, que es una estimación y
- * se mueve cada vez que entra mercancía a otro precio.
+ * Las dos preguntas van juntas porque se hacen juntas: para saber si una
+ * comisión es alta o baja hace falta ver contra cuánta venta salió.
+ *
+ * Los montos de comisión salen congelados de cuando se cerró cada venta, no
+ * del costo de hoy. Es la diferencia con el número del inventario, que es una
+ * estimación y se mueve cada vez que entra mercancía a otro precio.
  */
-export default async function PaginaComisiones() {
+export default async function PaginaVendedores() {
   const [vendedores, tasa] = await Promise.all([
     listarComisiones(),
     obtenerTasaVigente(),
@@ -27,7 +30,7 @@ export default async function PaginaComisiones() {
     <div className="mx-auto max-w-4xl px-8 py-10">
       <header className="mb-8">
         <h1 className="font-display text-texto tracking-titular text-2xl font-semibold">
-          Comisiones
+          Vendedores
         </h1>
         <p className="text-texto-2 mt-1 text-sm">
           {totalPorPagar > 0
@@ -59,7 +62,16 @@ export default async function PaginaComisiones() {
                 <h2 className="font-display text-texto text-lg font-semibold">
                   {vendedor.nombre}
                 </h2>
+                {/* El acumulado: cuánto lleva vendido, cuánto margen dejó eso
+                    y cuánto se le ha pagado. Sin la venta al lado, una
+                    comisión sola no dice si fue un buen mes. */}
+                <p className="text-texto-2 mt-0.5 text-sm">
+                  {formatearUsd(vendedor.totalVendido)} vendidos en{" "}
+                  {vendedor.pedidos}{" "}
+                  {vendedor.pedidos === 1 ? "pedido" : "pedidos"}
+                </p>
                 <p className="text-texto-meta text-xs">
+                  {formatearUsd(vendedor.margenGenerado)} de margen ·{" "}
                   {formatearUsd(vendedor.totalPagado)} pagados hasta hoy
                 </p>
               </div>
@@ -172,11 +184,12 @@ function Vacio() {
   return (
     <div className="border-borde rounded-panel border border-dashed px-6 py-16 text-center">
       <h2 className="font-display text-texto text-lg font-semibold">
-        Todavía no hay comisiones
+        Todavía no hay ventas con comisión
       </h2>
       <p className="text-texto-2 mx-auto mt-2 max-w-sm text-sm">
-        Se generan solas cuando un pedido pasa a pagado. Para que salga el monto
-        completo, carga el costo de la mercancía al recibirla.
+        Cada persona aparece aquí cuando atiende su primer pedido pagado. Para
+        que el monto salga completo, carga el costo de la mercancía al
+        recibirla.
       </p>
     </div>
   );

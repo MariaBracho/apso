@@ -36,6 +36,6 @@ export async function liquidarComisiones(
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
-  revalidatePath("/admin/comisiones");
+  revalidatePath("/admin/vendedores");
   return { ok: true, pagadas: data?.length ?? 0 };
 }

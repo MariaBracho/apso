@@ -439,10 +439,12 @@ test.describe("Comisiones", () => {
 
       expect(Number(despues!.margen_usd)).toBeCloseTo(margen, 2);
 
-      // Y se ve en el módulo, con el botón de liquidar.
-      await page.goto("/admin/comisiones");
-      await expect(page.getByRole("heading", { name: "Comisiones" })).toBeVisible();
+      // Y se ve en el módulo, con lo vendido al lado y el botón de liquidar.
+      await page.goto("/admin/vendedores");
+      await expect(page.getByRole("heading", { name: "Vendedores" })).toBeVisible();
       await expect(page.getByText(numero)).toBeVisible();
+      await expect(page.getByText(/vendidos en \d+ pedidos?/)).toBeVisible();
+      await expect(page.getByText(/de margen/)).toBeVisible();
       await expect(page.getByRole("button", { name: /marcar como pagadas/i })).toBeVisible();
     } finally {
       await db.from("comisiones").delete().eq("pedido_id", (await db.from("pedidos").select("id").eq("numero", numero).single()).data!.id);
@@ -470,7 +472,7 @@ test.describe("Comisiones", () => {
     const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
 
     try {
-      await page.goto("/admin/comisiones");
+      await page.goto("/admin/vendedores");
       await page.getByRole("button", { name: /marcar como pagadas/i }).click();
 
       // Pregunta antes: marcar como pagadas no se deshace desde el panel.

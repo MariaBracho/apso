@@ -125,7 +125,7 @@ export async function cambiarEstado(
     } else {
       await quitarComision(pedidoId);
     }
-    revalidatePath("/admin/comisiones");
+    revalidatePath("/admin/vendedores");
   }
 
   revalidatePath("/admin/pedidos");
@@ -378,7 +378,7 @@ export async function cambiarVendedor(
   });
 
   revalidatePath(`/admin/pedidos/${pedidoId}`);
-  revalidatePath("/admin/comisiones");
+  revalidatePath("/admin/vendedores");
 
   return {
     ok: true,
