@@ -4,10 +4,14 @@ import { redirect } from "next/navigation";
 
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
+/** Lo que puede hacer alguien. Se acumulan: quien administra suele vender. */
+export type Rol = "cliente" | "admin" | "vendedor";
+
 export type Sesion = {
   id: string;
   nombre: string;
   correo: string;
+  roles: Rol[];
   /** En E.164 (+58XXXXXXXXXX). Nulo mientras no haya completado el perfil. */
   whatsapp: string | null;
   esAdmin: boolean;
@@ -33,7 +37,7 @@ export async function obtenerSesion(): Promise<Sesion | null> {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre, correo, whatsapp, rol")
+    .select("nombre, correo, whatsapp, roles")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -44,7 +48,10 @@ export async function obtenerSesion(): Promise<Sesion | null> {
     nombre: perfil.nombre,
     correo: perfil.correo,
     whatsapp: perfil.whatsapp,
-    esAdmin: perfil.rol === "admin",
+    roles: perfil.roles,
+    // Atajo del rol que decide si se entra al panel, que es el que más se
+    // pregunta. Los demás se miran en `roles`.
+    esAdmin: perfil.roles.includes("admin"),
   };
 }
 

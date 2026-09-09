@@ -339,16 +339,16 @@ export async function cambiarVendedor(
 
   const supabase = await crearClienteServidor();
 
-  // Que sea admin se comprueba aquí y no solo en el selector: la acción se
+  // Que tenga el rol se comprueba aquí y no solo en el selector: la acción se
   // puede llamar sin pasar por la pantalla.
   const { data: vendedor } = await supabase
     .from("perfiles")
-    .select("id, nombre, rol")
+    .select("id, nombre, roles")
     .eq("id", perfilId)
     .maybeSingle();
 
-  if (!vendedor || vendedor.rol !== "admin") {
-    return { error: "Esa persona no atiende pedidos." };
+  if (!vendedor || !vendedor.roles.includes("vendedor")) {
+    return { error: "Esa persona no tiene el rol de vendedor." };
   }
 
   const { error } = await supabase

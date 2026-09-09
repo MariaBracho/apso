@@ -196,7 +196,9 @@ values (
   now(), now(), now()
 );
 
--- El perfil lo crea el trigger al_crear_usuario; aquí solo se le da el rol.
+-- El perfil lo crea el trigger al_crear_usuario; aquí solo se le dan los roles.
+-- Administra y vende, que es lo que hace en la práctica una sola persona.
 update public.perfiles
-set rol = 'admin', whatsapp = '+584246056110', whatsapp_verificado = true
+set roles = array['cliente', 'admin', 'vendedor']::public.rol_usuario[],
+    whatsapp = '+584246056110', whatsapp_verificado = true
 where id = '11111111-1111-4111-8111-111111111111';

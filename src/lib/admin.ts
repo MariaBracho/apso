@@ -355,9 +355,9 @@ export type Vendedor = { id: string; nombre: string };
 /**
  * Quiénes pueden quedar como vendedor de un pedido.
  *
- * Los admins, que son los que atienden. Hoy es una sola persona; existe la
- * lista porque el día que entre alguien más no hay que cambiar nada, y porque
- * un pedido atendido por quien no vendió atribuye la comisión al equivocado.
+ * Los que tienen el rol, que no es lo mismo que administrar: hoy la misma
+ * persona hace las dos cosas, pero el día que entre alguien que solo venda
+ * aparece aquí sin darle el panel entero.
  */
 export async function listarVendedores(): Promise<Vendedor[]> {
   const supabase = await crearClienteServidor();
@@ -365,7 +365,7 @@ export async function listarVendedores(): Promise<Vendedor[]> {
   const { data } = await supabase
     .from("perfiles")
     .select("id, nombre")
-    .eq("rol", "admin")
+    .contains("roles", ["vendedor"])
     .order("nombre");
 
   return data ?? [];

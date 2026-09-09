@@ -213,6 +213,70 @@ export type Database = {
           },
         ]
       }
+      comisiones: {
+        Row: {
+          creado_en: string
+          id: string
+          items_sin_costo: number
+          margen_usd: number
+          monto_usd: number
+          nota: string | null
+          pagada_en: string | null
+          pagada_por: string | null
+          pedido_id: string
+          perfil_id: string
+          porcentaje: number
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          items_sin_costo?: number
+          margen_usd: number
+          monto_usd: number
+          nota?: string | null
+          pagada_en?: string | null
+          pagada_por?: string | null
+          pedido_id: string
+          perfil_id: string
+          porcentaje: number
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          items_sin_costo?: number
+          margen_usd?: number
+          monto_usd?: number
+          nota?: string | null
+          pagada_en?: string | null
+          pagada_por?: string | null
+          pedido_id?: string
+          perfil_id?: string
+          porcentaje?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comisiones_pagada_por_fkey"
+            columns: ["pagada_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comisiones_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favoritos: {
         Row: {
           creado_en: string
@@ -600,7 +664,7 @@ export type Database = {
           foto_url: string | null
           id: string
           nombre: string
-          rol: Database["public"]["Enums"]["rol_usuario"]
+          roles: Database["public"]["Enums"]["rol_usuario"][]
           whatsapp: string | null
           whatsapp_verificado: boolean
         }
@@ -611,7 +675,7 @@ export type Database = {
           foto_url?: string | null
           id: string
           nombre: string
-          rol?: Database["public"]["Enums"]["rol_usuario"]
+          roles?: Database["public"]["Enums"]["rol_usuario"][]
           whatsapp?: string | null
           whatsapp_verificado?: boolean
         }
@@ -622,7 +686,7 @@ export type Database = {
           foto_url?: string | null
           id?: string
           nombre?: string
-          rol?: Database["public"]["Enums"]["rol_usuario"]
+          roles?: Database["public"]["Enums"]["rol_usuario"][]
           whatsapp?: string | null
           whatsapp_verificado?: boolean
         }
@@ -845,6 +909,7 @@ export type Database = {
     }
     Functions: {
       es_admin: { Args: never; Returns: boolean }
+      es_vendedor: { Args: never; Returns: boolean }
       mover_inventario: {
         Args: {
           p_cantidad: number
@@ -886,7 +951,7 @@ export type Database = {
       motivo_movimiento: "entrada" | "venta" | "devolucion" | "ajuste"
       origen_pedido: "web" | "mostrador" | "whatsapp"
       respaldo_garantia: "fabricante" | "apso"
-      rol_usuario: "cliente" | "admin"
+      rol_usuario: "cliente" | "admin" | "vendedor"
       tipo_entrega: "punto_fijo" | "envio_nacional"
     }
     CompositeTypes: {
@@ -1046,7 +1111,7 @@ export const Constants = {
       motivo_movimiento: ["entrada", "venta", "devolucion", "ajuste"],
       origen_pedido: ["web", "mostrador", "whatsapp"],
       respaldo_garantia: ["fabricante", "apso"],
-      rol_usuario: ["cliente", "admin"],
+      rol_usuario: ["cliente", "admin", "vendedor"],
       tipo_entrega: ["punto_fijo", "envio_nacional"],
     },
   },

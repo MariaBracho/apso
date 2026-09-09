@@ -510,11 +510,16 @@ test.describe("Quién atiende el pedido", () => {
     // Hace falta un segundo vendedor: con uno solo no hay nada que elegir.
     const { data: otro } = await db
       .from("perfiles")
-      .select("id, nombre, rol")
+      .select("id, nombre, roles")
       .neq("correo", "admin@apso.com.ve")
       .limit(1)
       .single();
-    await db.from("perfiles").update({ rol: "admin" }).eq("id", otro!.id);
+    // Solo vendedor, sin el panel: es justo el caso que el rol separado hace
+    // posible y que con una única columna no cabía.
+    await db
+      .from("perfiles")
+      .update({ roles: ["cliente", "vendedor"] })
+      .eq("id", otro!.id);
 
     await db.rpc("mover_inventario", {
       p_producto: producto.id, p_cantidad: 3, p_motivo: "entrada", p_costo: 60,
@@ -574,7 +579,7 @@ test.describe("Quién atiende el pedido", () => {
       await borrarPedido(numero);
       await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
       await db.from("productos").update({ stock: antes }).eq("id", producto.id);
-      await db.from("perfiles").update({ rol: otro!.rol }).eq("id", otro!.id);
+      await db.from("perfiles").update({ roles: otro!.roles }).eq("id", otro!.id);
     }
   });
 });
