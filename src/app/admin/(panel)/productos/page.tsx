@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { EditorCosto } from "@/components/admin/editor-costo";
 import { EditorStock } from "@/components/admin/editor-stock";
 import { InterruptorPublicado } from "@/components/admin/interruptor-publicado";
-import { type ProductoAdmin, listarProductos } from "@/lib/admin";
+import { listarProductos } from "@/lib/admin";
 import { obtenerAjustes, obtenerTasaVigente } from "@/lib/catalogo";
 import { disponibilidadDe } from "@/lib/producto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
-import { margenDe, preciosDe } from "@/lib/precio";
+import { preciosDe } from "@/lib/precio";
 
 export const metadata: Metadata = { title: "Inventario" };
 
@@ -46,9 +47,10 @@ export default async function PaginaInventario() {
               {sinCosto === productos.length
                 ? "Ninguno tiene el costo de compra cargado"
                 : `${sinCosto} sin costo de compra`}
-              , así que no se puede calcular margen ni comisión. Se carga con el{" "}
-              <span className="text-texto-2">+</span> de la columna Stock, al
-              recibir mercancía.
+              , así que no se puede calcular margen ni comisión. Lo que ya
+              tienes en el estante se declara con «Poner costo»; lo que llegue
+              después, con el <span className="text-texto-2">+</span> de la
+              columna Stock.
             </p>
           )}
         </div>
@@ -102,7 +104,14 @@ export default async function PaginaInventario() {
                     <p className="text-exito font-display">
                       {formatearUsd(producto.precio_usd)}
                     </p>
-                    <MargenDelProducto producto={producto} comision={comision} />
+                    <EditorCosto
+                      productoId={producto.id}
+                      nombre={producto.nombre}
+                      precioDivisa={producto.precio_usd}
+                      costo={producto.costo_promedio_usd}
+                      comision={comision}
+                      stock={producto.stock}
+                    />
                   </td>
 
                   <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -177,53 +186,6 @@ function PrecioBcv({
       <p className="text-texto-meta text-xs">
         {tasa === null ? "Sin tasa cargada" : formatearBs(bolivares, tasa)}
       </p>
-    </>
-  );
-}
-
-/**
- * Lo que se gana con una unidad, debajo del precio en divisas.
- *
- * Va contra ese y no contra el de bolívares porque es el más bajo: si el
- * margen da bien ahí, da bien cobrando de la otra forma. Sin costo cargado no
- * se dibuja un número — se dice que falta, que es lo accionable.
- */
-function MargenDelProducto({
-  producto,
-  comision,
-}: {
-  producto: ProductoAdmin;
-  comision: number;
-}) {
-  const margen = margenDe(
-    producto.precio_usd,
-    producto.costo_promedio_usd,
-    comision,
-  );
-
-  if (!margen) {
-    return <p className="text-texto-meta text-xs">Sin costo</p>;
-  }
-
-  // Vender por debajo del costo no es un margen pequeño, es una pérdida, y
-  // tiene que saltar a la vista sin leer el número.
-  const perdiendo = margen.monto < 0;
-
-  return (
-    <>
-      <p className={`text-xs ${perdiendo ? "text-error" : "text-texto-meta"}`}>
-        {perdiendo ? "−" : "+"}
-        {formatearUsd(Math.abs(margen.monto))} · {margen.porcentaje} %
-      </p>
-      {/* La comisión debajo y con el neto al lado: el margen de arriba es lo
-          que deja el producto, y este es lo que le queda a la tienda una vez
-          pagada. Verlos separados evita confundir uno con el otro. */}
-      {margen.comision > 0 && (
-        <p className="text-texto-3 text-[11px]">
-          comisión {formatearUsd(margen.comision)} · queda{" "}
-          {formatearUsd(margen.neto)}
-        </p>
-      )}
     </>
   );
 }

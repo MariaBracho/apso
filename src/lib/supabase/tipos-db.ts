@@ -908,6 +908,10 @@ export type Database = {
       }
     }
     Functions: {
+      declarar_costo_inicial: {
+        Args: { p_costo: number; p_producto: string }
+        Returns: undefined
+      }
       es_admin: { Args: never; Returns: boolean }
       es_vendedor: { Args: never; Returns: boolean }
       mover_inventario: {
@@ -948,7 +952,12 @@ export type Database = {
         | "binance"
         | "efectivo"
         | "tarjeta_internacional"
-      motivo_movimiento: "entrada" | "venta" | "devolucion" | "ajuste"
+      motivo_movimiento:
+        | "entrada"
+        | "inventario_inicial"
+        | "venta"
+        | "devolucion"
+        | "ajuste"
       origen_pedido: "web" | "mostrador" | "whatsapp"
       respaldo_garantia: "fabricante" | "apso"
       rol_usuario: "cliente" | "admin" | "vendedor"
@@ -1108,7 +1117,13 @@ export const Constants = {
         "efectivo",
         "tarjeta_internacional",
       ],
-      motivo_movimiento: ["entrada", "venta", "devolucion", "ajuste"],
+      motivo_movimiento: [
+        "entrada",
+        "inventario_inicial",
+        "venta",
+        "devolucion",
+        "ajuste",
+      ],
       origen_pedido: ["web", "mostrador", "whatsapp"],
       respaldo_garantia: ["fabricante", "apso"],
       rol_usuario: ["cliente", "admin", "vendedor"],

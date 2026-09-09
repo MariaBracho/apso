@@ -386,3 +386,38 @@ export async function cambiarVendedor(
     comisionMovida: !pendiente || (movidas?.length ?? 0) > 0,
   };
 }
+
+/**
+ * Pone costo a las existencias que ya estaban en el estante.
+ *
+ * El costo normal se carga al recibir mercancía, pero lo que ya había cuando
+ * apareció el campo se quedaba sin él para siempre: no había forma de decir
+ * «estas cinco que tengo me costaron 62» sin fingir que acababan de llegar y
+ * duplicar el stock. Sin esto no hay margen ni comisión sobre nada de lo que
+ * hay hoy.
+ *
+ * Declara, no mueve: registra las unidades y su costo y deja el stock donde
+ * está. Una sola vez por producto — repetirla arrastraría el promedio hacia el
+ * último número escrito.
+ */
+export async function declararCostoInicial(
+  productoId: string,
+  costoUsd: number,
+): Promise<EstadoAccion> {
+  await exigirAdmin();
+
+  if (!Number.isFinite(costoUsd) || costoUsd < 0) {
+    return { error: "El costo tiene que ser un número, cero o más." };
+  }
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase.rpc("declarar_costo_inicial", {
+    p_producto: productoId,
+    p_costo: costoUsd,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/productos");
+  return { ok: true };
+}

@@ -353,9 +353,9 @@ test.describe("Costo de compra", () => {
     await page.goto("/admin/productos");
 
     const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
-    // Sin costo cargado no hay margen que mostrar, y se dice en vez de
-    // dibujar un número inventado.
-    await expect(fila).toContainText("Sin costo");
+    // Sin costo no hay margen que mostrar. En vez de un número inventado se
+    // ofrece cargarlo, que es lo accionable.
+    await expect(fila.getByRole("button", { name: "Poner costo" })).toBeVisible();
 
     await fila.getByRole("button", { name: new RegExp(`sumar unidades.*${producto.nombre}`, "i") }).click();
     await page.getByLabel(new RegExp(`cuántas unidades entraron de ${producto.nombre}`, "i")).fill("2");
@@ -652,6 +652,63 @@ test.describe("Mis ventas y comisiones", () => {
     } finally {
       await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
       await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});
+
+test.describe("Costo del stock que ya está", () => {
+  /**
+   * Lo que ya estaba en el estante no tenía dónde declarar su costo: el «+»
+   * es para mercancía que llega, y usarlo duplicaría las existencias. Sin esto
+   * no hay margen ni comisión sobre nada de lo que hay hoy.
+   */
+  test("«Poner costo» declara sin mover el stock, y solo una vez", async ({ page }) => {
+    const producto = await productoPorSlug("crucial-p3-plus-1tb");
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/productos");
+
+    const fila = page.getByRole("row", { name: new RegExp(producto.nombre, "i") });
+    await fila.getByRole("button", { name: "Poner costo" }).click();
+    await page
+      .getByLabel(new RegExp(`cuánto costó cada unidad de ${producto.nombre}`, "i"))
+      .fill("38");
+    await page.keyboard.press("Enter");
+
+    try {
+      await expect(page.getByText(/costo \$38/)).toBeVisible();
+
+      // El stock no se movió: no llegó mercancía, solo se dijo qué costó.
+      const { data } = await db
+        .from("productos").select("stock").eq("id", producto.id).single();
+      expect(data!.stock).toBe(antes);
+
+      const { data: costo } = await db
+        .from("costos_producto")
+        .select("costo_promedio_usd, unidades_con_costo")
+        .eq("producto_id", producto.id)
+        .single();
+      expect(Number(costo!.costo_promedio_usd)).toBeCloseTo(38, 2);
+      expect(costo!.unidades_con_costo).toBe(antes);
+
+      // Y ya hay margen, con su comisión.
+      await page.reload();
+      const margen = producto.precio_usd - 38;
+      await expect(fila).toContainText(
+        `${Math.round((margen / producto.precio_usd) * 100)} %`,
+      );
+
+      // Declararlo otra vez arrastraría el promedio al último número escrito.
+      await expect(fila.getByRole("button", { name: "Poner costo" })).toHaveCount(0);
+
+      const { error } = await db.rpc("declarar_costo_inicial", {
+        p_producto: producto.id, p_costo: 99,
+      });
+      expect(error, "la segunda declaración debe rechazarse").not.toBeNull();
+    } finally {
       await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
       await db.from("productos").update({ stock: antes }).eq("id", producto.id);
     }
