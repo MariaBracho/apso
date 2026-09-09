@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { obtenerTasaVigente } from "@/lib/catalogo";
 import { resumenDeVendedor } from "@/lib/comisiones";
-import { formatearUsd } from "@/lib/formato";
+import { formatearBs, formatearUsd } from "@/lib/formato";
 import { exigirAdmin } from "@/lib/sesion";
 
 export const metadata: Metadata = { title: "Mis ventas y comisiones" };
@@ -19,9 +20,8 @@ export const metadata: Metadata = { title: "Mis ventas y comisiones" };
  */
 export default async function PaginaMisVentas() {
   const sesion = await exigirAdmin();
-  const { ventas, totalVendido, porCobrar, cobrado } = await resumenDeVendedor(
-    sesion.id,
-  );
+  const [{ ventas, totalVendido, porCobrar, cobrado }, tasa] =
+    await Promise.all([resumenDeVendedor(sesion.id), obtenerTasaVigente()]);
 
   return (
     <div className="mx-auto max-w-4xl px-8 py-10">
@@ -36,17 +36,20 @@ export default async function PaginaMisVentas() {
         <Tarjeta
           etiqueta="Por cobrar"
           valor={porCobrar}
+          tasa={tasa}
           nota="De ventas ya pagadas por el cliente"
           destacada
         />
         <Tarjeta
           etiqueta="Ya cobrado"
           valor={cobrado}
+          tasa={tasa}
           nota="Liquidado hasta hoy"
         />
         <Tarjeta
           etiqueta="Vendido"
           valor={totalVendido}
+          tasa={tasa}
           nota={`${ventas.length} ${ventas.length === 1 ? "pedido" : "pedidos"}`}
         />
       </div>
@@ -132,14 +135,23 @@ function Comision({
   );
 }
 
+/**
+ * Un número, en dólares y en bolívares.
+ *
+ * Los bolívares salen de la tasa del BCV pelada, sin el recargo del catálogo:
+ * ese recargo existe para cubrir la pérdida de cobrar en bolívares y reponer
+ * inventario comprando dólares, y pagar una comisión no repone nada.
+ */
 function Tarjeta({
   etiqueta,
   valor,
+  tasa,
   nota,
   destacada = false,
 }: {
   etiqueta: string;
   valor: number;
+  tasa: number | null;
   nota: string;
   destacada?: boolean;
 }) {
@@ -157,6 +169,9 @@ function Tarjeta({
       >
         {formatearUsd(valor)}
       </p>
+      {tasa !== null && (
+        <p className="text-texto-2 mt-0.5 text-sm">{formatearBs(valor, tasa)}</p>
+      )}
       <p className="text-texto-meta mt-1 text-xs">{nota}</p>
     </div>
   );

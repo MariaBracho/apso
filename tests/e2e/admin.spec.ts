@@ -6,6 +6,7 @@ import {
   db,
   productoPorSlug,
   recargoActual,
+  tasaVigente,
   rutaDe,
 } from "./soporte/datos";
 import { entrarComoAdmin } from "./soporte/sesion";
@@ -616,12 +617,19 @@ test.describe("Mis ventas y comisiones", () => {
       await expect(page.getByText(numero)).toBeVisible();
       await expect(page.getByText("por cobrar").first()).toBeVisible();
 
+      // El monto también en bolívares, y con la tasa pelada: el recargo del
+      // catálogo cubre reponer inventario, y una comisión no repone nada.
+      const tasa = await tasaVigente();
+
       const margen = producto.precio_usd - 60;
       const { data: ajustes } = await db.from("ajustes").select("comision_venta_pct").single();
       const esperada = Math.round(margen * (Number(ajustes!.comision_venta_pct) / 100) * 100) / 100;
       await expect(
         page.getByText(`$${esperada.toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`).first(),
       ).toBeVisible();
+
+      const enBolivares = Math.round(esperada * tasa).toLocaleString("es-VE", { maximumFractionDigits: 0 });
+      await expect(page.getByText(`Bs ${enBolivares}`).first()).toBeVisible();
 
       // Reasignado a otra persona, deja de ser una venta propia.
       const { data: otro } = await db

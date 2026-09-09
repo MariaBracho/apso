@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BotonLiquidar } from "@/components/admin/boton-liquidar";
+import { obtenerTasaVigente } from "@/lib/catalogo";
 import { type ComisionDeVendedor, listarComisiones } from "@/lib/comisiones";
-import { formatearUsd } from "@/lib/formato";
+import { formatearBs, formatearUsd } from "@/lib/formato";
 
 export const metadata: Metadata = { title: "Comisiones" };
 
@@ -15,7 +16,10 @@ export const metadata: Metadata = { title: "Comisiones" };
  * se mueve cada vez que entra mercancía a otro precio.
  */
 export default async function PaginaComisiones() {
-  const vendedores = await listarComisiones();
+  const [vendedores, tasa] = await Promise.all([
+    listarComisiones(),
+    obtenerTasaVigente(),
+  ]);
 
   const totalPorPagar = vendedores.reduce((s, v) => s + v.totalPorPagar, 0);
 
@@ -34,6 +38,14 @@ export default async function PaginaComisiones() {
           Cada comisión se calcula cuando la venta se da por pagada y desde ahí
           no cambia, aunque después el producto se compre más caro. Por eso
           puede no coincidir con lo que estima el inventario.
+        </p>
+        {/* Sin recargo: eso existe para cubrir la pérdida de cobrar en
+            bolívares y reponer comprando dólares. Pagar una comisión no repone
+            nada, así que aquí la conversión es la tasa pelada. */}
+        <p className="text-texto-meta mt-1 max-w-lg text-xs leading-relaxed">
+          {tasa === null
+            ? "Sin tasa cargada no se puede mostrar el equivalente en bolívares."
+            : `Los bolívares salen de la tasa del BCV del día, sin recargo: Bs ${tasa.toLocaleString("es-VE", { minimumFractionDigits: 2 })} por dólar.`}
         </p>
       </header>
 
@@ -57,9 +69,17 @@ export default async function PaginaComisiones() {
                   <span className="etiqueta text-texto-3 block text-[10px]">
                     Por pagar
                   </span>
-                  <span className="font-display text-ambar text-xl font-semibold">
+                  <span className="font-display text-ambar block text-xl font-semibold">
                     {formatearUsd(vendedor.totalPorPagar)}
                   </span>
+                  {/* En bolívares junto al dólar: es el monto que se va a
+                      entregar, y calcularlo aparte antes de pagar es de donde
+                      salen los errores. */}
+                  {tasa !== null && (
+                    <span className="text-texto-meta block text-xs">
+                      {formatearBs(vendedor.totalPorPagar, tasa)}
+                    </span>
+                  )}
                 </p>
                 <BotonLiquidar
                   perfilId={vendedor.perfilId}
