@@ -10,7 +10,7 @@ import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
-import { NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
+import { NOMBRE_ORIGEN, NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
 
 export const metadata: Metadata = { title: "Detalle del pedido" };
 
@@ -198,6 +198,11 @@ function Cliente({
           <Dato termino="Correo" valor={pedido.cliente_correo} />
         )}
         <Dato termino="Entrega" valor={destinoDe(pedido)} />
+        {/* Solo cuando no vino de la web: es lo que explica por qué el pedido
+            no tiene conversación de la tienda detrás. */}
+        {NOMBRE_ORIGEN[pedido.origen] && (
+          <Dato termino="Entró por" valor={NOMBRE_ORIGEN[pedido.origen]} />
+        )}
         <Dato
           termino="Pago"
           valor={NOMBRE_PAGO[pedido.metodo_pago ?? ""] ?? "Por acordar"}

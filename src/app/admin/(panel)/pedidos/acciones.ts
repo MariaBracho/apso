@@ -58,7 +58,7 @@ export async function cambiarEstado(
 
   const { data: pedido } = await supabase
     .from("pedidos")
-    .select("id, estado, es_encargo, inventario_descontado")
+    .select("id, estado, es_encargo, inventario_descontado, confirmado_en")
     .eq("id", pedidoId)
     .maybeSingle();
 
@@ -84,7 +84,15 @@ export async function cambiarEstado(
     atendido_por: sesion.id,
   };
 
-  if (nuevoEstado === "confirmado_y_pagado") cambios.confirmado_en = ahora;
+  // Se marca al pasar el corte del pago, no solo en ese estado exacto: una
+  // venta de mostrador entra directo en «entregado» y se quedaba sin fecha de
+  // confirmación, que es de donde salen los tiempos de atención.
+  if (
+    pedido.confirmado_en === null &&
+    inventarioDeberiaEstarDescontado(nuevoEstado, pedido.es_encargo)
+  ) {
+    cambios.confirmado_en = ahora;
+  }
   // La garantía arranca al entregar, no al despachar (flujo 15, paso 4).
   if (nuevoEstado === "entregado") cambios.entregado_en = ahora;
   if (esCancelado(nuevoEstado)) cambios.motivo_cancelacion = motivo!.trim();

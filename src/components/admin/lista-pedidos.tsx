@@ -7,6 +7,7 @@ import { FotoProducto } from "@/components/tienda/foto-producto";
 import type { PedidoFila } from "@/lib/admin";
 import { NOMBRE_ESTADO, type EstadoPedido } from "@/lib/estados";
 import { formatearUsd } from "@/lib/formato";
+import { NOMBRE_ORIGEN } from "@/lib/pedido";
 import { fotoPrincipal } from "@/lib/producto";
 
 /** Pasadas dos horas sin responder, la espera se marca en rojo. */
@@ -78,6 +79,7 @@ function coincide(pedido: PedidoFila, q: string): boolean {
 
   const campos = [
     pedido.numero,
+    NOMBRE_ORIGEN[pedido.origen] ?? "",
     pedido.cliente_nombre,
     NOMBRE_ESTADO[pedido.estado as EstadoPedido] ?? pedido.estado,
     ...pedido.items.map((i) => i.nombre_producto),
@@ -119,6 +121,15 @@ function Fila({ pedido }: { pedido: PedidoFila }) {
             <p className="text-texto-meta text-xs">
               {pedido.cliente_whatsapp} ·{" "}
               {NOMBRE_ESTADO[pedido.estado as EstadoPedido] ?? pedido.estado}
+              {/* Solo si no vino de la web: lo normal no necesita etiqueta. */}
+              {NOMBRE_ORIGEN[pedido.origen] && (
+                <>
+                  {" · "}
+                  <span className="text-violeta">
+                    {NOMBRE_ORIGEN[pedido.origen]}
+                  </span>
+                </>
+              )}
             </p>
           </div>
 

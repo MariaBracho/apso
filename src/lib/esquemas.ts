@@ -356,6 +356,58 @@ export const esquemaPedidoConCuenta = esquemaPedido.shape({
 
 export type DatosPedidoConCuenta = yup.InferType<typeof esquemaPedidoConCuenta>;
 
+/** Por dónde entró un pedido que se carga a mano. La web no es una opción. */
+export const ORIGENES_MANUALES = ["mostrador", "whatsapp"] as const;
+
+/**
+ * El pedido que registra el panel por una venta que ya ocurrió.
+ *
+ * Es el de invitado más tres cosas: por dónde entró, qué se llevó y si ya está
+ * entregado. Las líneas se cargan a mano porque no hay carrito detrás — la
+ * venta pasó en el mostrador o por chat.
+ *
+ * El precio por unidad se escribe y no se calcula. Lo carga quien vende, que
+ * es quien sabe si hubo descuento; el formulario lo propone según el método de
+ * pago, pero la última palabra es suya.
+ */
+export const esquemaPedidoManual = esquemaPedido.concat(
+  yup.object({
+    origen: yup
+      .string()
+      .oneOf(ORIGENES_MANUALES, "Di si fue en el mostrador o por WhatsApp.")
+      .required("Di por dónde entró."),
+
+    // Una venta de mostrador ya pasó: se cobró y el equipo salió. Marcarlo
+    // aquí evita tener que recorrer el flujo entero después.
+    ya_entregado: yup.boolean().default(false),
+
+    items: yup
+      .array()
+      .of(
+        yup.object({
+          producto_id: yup.string().required("Elige el producto."),
+          cantidad: yup
+            .number()
+            .transform(numeroConComa)
+            .typeError("La cantidad tiene que ser un número.")
+            .required("Pon la cantidad.")
+            .integer("Las unidades son enteras.")
+            .min(1, "Mínimo una unidad."),
+          precio_usd: yup
+            .number()
+            .transform(numeroConComa)
+            .typeError("El precio tiene que ser un número.")
+            .required("Pon el precio.")
+            .min(0, "El precio no puede ser negativo."),
+        }),
+      )
+      .required()
+      .min(1, "Agrega al menos un producto."),
+  }),
+);
+
+export type DatosPedidoManual = yup.InferType<typeof esquemaPedidoManual>;
+
 /**
  * Valida en el servidor y devuelve el primer error legible.
  *

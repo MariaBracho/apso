@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { ListaPedidos } from "@/components/admin/lista-pedidos";
 import { listarPedidos } from "@/lib/admin";
@@ -13,9 +14,20 @@ export default async function PaginaPedidos() {
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
       <header className="mb-8">
-        <h1 className="font-display text-texto tracking-titular text-2xl font-semibold">
-          Pedidos
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1 className="font-display text-texto tracking-titular text-2xl font-semibold">
+            Pedidos
+          </h1>
+
+          {/* Lo que se vende en el mostrador o por chat entra por aquí: si no
+              se registra, el inventario del panel deja de ser el real. */}
+          <Link
+            href="/admin/pedidos/nuevo"
+            className="bg-cian text-superficie rounded-pildora hover:bg-cian/90 shrink-0 px-5 py-2.5 text-sm font-semibold transition-colors"
+          >
+            Registrar venta
+          </Link>
+        </div>
         {/* Los conteos son del total y no de lo encontrado: son la foto del
             día, y que cambiaran al teclear en el buscador haría perder de vista
             cuántos quedan de verdad por atender. */}

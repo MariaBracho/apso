@@ -191,3 +191,101 @@ test.describe("Precios de la tienda", () => {
     }
   });
 });
+
+test.describe("Ventas fuera de la web", () => {
+  /**
+   * Lo que se vende en el mostrador tiene que descontar inventario igual que
+   * lo de la web, y quedar registrado con su movimiento. Si no, el stock del
+   * panel se va separando del real y nadie se entera hasta contar las cajas.
+   */
+  test("registrar una venta descuenta el stock y deja el movimiento", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const otro = await productoPorSlug("crucial-p3-plus-1tb");
+    const antes = producto.stock;
+    const antesOtro = otro.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+
+    await page.getByLabel("Entró por").selectOption("mostrador");
+    await page.getByLabel("Cómo pagó").selectOption("efectivo");
+
+    // Dos líneas: es lo normal en una venta de mostrador y es donde se rompe
+    // un formulario de líneas si está mal armado.
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Agregar producto").selectOption(otro.id);
+    await expect(page.getByRole("button", { name: /^quitar/i })).toHaveCount(2);
+
+    await page.getByLabel("Nombre", { exact: true }).fill("Zoraida Perdomo");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4145558899");
+
+    // Viene marcado: la venta de mostrador ya ocurrió.
+    await expect(page.getByRole("checkbox", { name: /ya está pagado y entregado/i })).toBeChecked();
+
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    try {
+      await expect(page.getByText("Entró por")).toBeVisible();
+      // Sale en el título y en la ficha de datos; con una basta.
+      await expect(page.getByText("Zoraida Perdomo").first()).toBeVisible();
+
+      const { data: pedido } = await db
+        .from("pedidos")
+        .select("origen, estado, metodo_pago, total_usd, inventario_descontado, confirmado_en, entregado_en")
+        .eq("numero", numero)
+        .single();
+
+      expect(pedido!.origen).toBe("mostrador");
+      expect(pedido!.estado).toBe("entregado");
+      // En efectivo se cobra el precio en divisas, igual que en la web, y el
+      // total es la suma de las líneas.
+      expect(Number(pedido!.total_usd)).toBeCloseTo(
+        producto.precio_usd + otro.precio_usd,
+        2,
+      );
+      expect(pedido!.inventario_descontado).toBe(true);
+      // Una venta que entra directo en «entregado» tenía que quedarse sin
+      // fecha de confirmación, que es de donde salen los tiempos de atención.
+      expect(pedido!.confirmado_en).not.toBeNull();
+      expect(pedido!.entregado_en).not.toBeNull();
+
+      // Y el stock bajó de verdad, con su movimiento colgado del pedido.
+      const { data: despues } = await db
+        .from("productos")
+        .select("id, stock")
+        .in("id", [producto.id, otro.id]);
+      const stockDe = (id: string) =>
+        despues!.find((p) => p.id === id)!.stock;
+      expect(stockDe(producto.id)).toBe(antes - 1);
+      expect(stockDe(otro.id)).toBe(antesOtro - 1);
+
+      const { data: movimientos } = await db
+        .from("movimientos_inventario")
+        .select("cantidad, motivo")
+        .eq("producto_id", producto.id)
+        .order("creado_en", { ascending: false })
+        .limit(1);
+      expect(movimientos![0]).toMatchObject({ cantidad: -1, motivo: "venta" });
+    } finally {
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+      await db.from("productos").update({ stock: antesOtro }).eq("id", otro.id);
+    }
+  });
+
+  test("sin productos no se registra nada", async ({ page }) => {
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+
+    await page.getByLabel("Nombre", { exact: true }).fill("Nadie");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+
+    // Se queda donde está y lo dice, en vez de registrar un pedido vacío.
+    await expect(page.getByText("Agrega al menos un producto.")).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/pedidos\/nuevo/);
+  });
+});

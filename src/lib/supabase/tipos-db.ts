@@ -501,6 +501,7 @@ export type Database = {
           motivo_cancelacion: string | null
           numero: string
           numero_guia: string | null
+          origen: Database["public"]["Enums"]["origen_pedido"]
           para_que_lo_usa: string | null
           perfil_id: string | null
           plazo_encargo_dias: number | null
@@ -530,6 +531,7 @@ export type Database = {
           motivo_cancelacion?: string | null
           numero?: string
           numero_guia?: string | null
+          origen?: Database["public"]["Enums"]["origen_pedido"]
           para_que_lo_usa?: string | null
           perfil_id?: string | null
           plazo_encargo_dias?: number | null
@@ -559,6 +561,7 @@ export type Database = {
           motivo_cancelacion?: string | null
           numero?: string
           numero_guia?: string | null
+          origen?: Database["public"]["Enums"]["origen_pedido"]
           para_que_lo_usa?: string | null
           perfil_id?: string | null
           plazo_encargo_dias?: number | null
@@ -859,6 +862,7 @@ export type Database = {
         | "efectivo"
         | "tarjeta_internacional"
       motivo_movimiento: "entrada" | "venta" | "devolucion" | "ajuste"
+      origen_pedido: "web" | "mostrador" | "whatsapp"
       respaldo_garantia: "fabricante" | "apso"
       rol_usuario: "cliente" | "admin"
       tipo_entrega: "punto_fijo" | "envio_nacional"
@@ -1018,6 +1022,7 @@ export const Constants = {
         "tarjeta_internacional",
       ],
       motivo_movimiento: ["entrada", "venta", "devolucion", "ajuste"],
+      origen_pedido: ["web", "mostrador", "whatsapp"],
       respaldo_garantia: ["fabricante", "apso"],
       rol_usuario: ["cliente", "admin"],
       tipo_entrega: ["punto_fijo", "envio_nacional"],

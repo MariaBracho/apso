@@ -62,6 +62,7 @@ export type PedidoFila = {
   cliente_nombre: string;
   cliente_whatsapp: string;
   estado: string;
+  origen: string;
   para_que_lo_usa: string | null;
   total_usd: number;
   creado_en: string;
@@ -85,7 +86,7 @@ export type PedidoFila = {
 const TOPE_HISTORIAL = 200;
 
 const CAMPOS_PEDIDO_FILA = `
-  id, numero, cliente_nombre, cliente_whatsapp, estado, para_que_lo_usa,
+  id, numero, cliente_nombre, cliente_whatsapp, estado, origen, para_que_lo_usa,
   total_usd, creado_en,
   items:pedido_items (
     nombre_producto, cantidad,
@@ -151,6 +152,7 @@ export type PedidoDetalle = {
   cliente_whatsapp: string;
   cliente_correo: string | null;
   estado: string;
+  origen: string;
   es_encargo: boolean;
   plazo_encargo_dias: number | null;
   entrega: string;
@@ -187,7 +189,7 @@ export async function obtenerPedido(id: string): Promise<PedidoDetalle | null> {
   const { data } = await supabase
     .from("pedidos")
     .select(
-      `id, numero, cliente_nombre, cliente_whatsapp, cliente_correo, estado,
+      `id, numero, cliente_nombre, cliente_whatsapp, cliente_correo, estado, origen,
        es_encargo, plazo_encargo_dias, entrega, ciudad_destino, estado_destino, metodo_pago,
        para_que_lo_usa, motivo_cancelacion, tasa_cambio, subtotal_usd,
        total_usd, inventario_descontado, creado_en, confirmado_en, entregado_en,

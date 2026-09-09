@@ -40,3 +40,14 @@ export function destinoDe(pedido: {
     ? `envío a ${pedido.ciudad_destino}, ${pedido.estado_destino}`
     : `envío a ${pedido.ciudad_destino}`;
 }
+
+/**
+ * De dónde entró el pedido.
+ *
+ * «web» no se muestra: es el caso normal y anotarlo en cada fila solo haría
+ * ruido. Lo que interesa ver de un vistazo es lo que se cargó a mano.
+ */
+export const NOMBRE_ORIGEN: Record<string, string> = {
+  mostrador: "Mostrador",
+  whatsapp: "WhatsApp",
+};
