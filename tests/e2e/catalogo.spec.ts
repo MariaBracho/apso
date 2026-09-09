@@ -83,6 +83,37 @@ test.describe("Catálogo", () => {
     }
   });
 
+  /**
+   * El buscador de la barra mira toda la tienda.
+   *
+   * Apuntaba a `/componentes` fijo, así que «lenovo» devolvía nada aunque
+   * hubiera Lenovo en el catálogo: ninguna es un componente. Se comprueba
+   * desde Laptops, que es donde se notó, y desde Componentes, que es donde
+   * fallaba siempre.
+   */
+  test("el buscador encuentra en toda la tienda, no solo en la sección donde estás", async ({ page }) => {
+    const lenovo = await productoPorSlug("lenovo-ideapad-slim-3-15");
+
+    for (const desde of ["/laptops", "/componentes"]) {
+      await page.goto(desde);
+      await page.getByRole("searchbox").first().fill("lenovo");
+      await page.getByRole("searchbox").first().press("Enter");
+
+      await page.waitForURL(/\/buscar\?q=lenovo/);
+      await expect(
+        page.getByRole("heading", { name: new RegExp(lenovo.nombre, "i") }),
+      ).toBeVisible();
+    }
+  });
+
+  test("una búsqueda sin resultados ofrece las dos secciones", async ({ page }) => {
+    await page.goto("/buscar?q=zzzznoexiste");
+
+    await expect(page.getByText(/No encontramos «zzzznoexiste»/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Componentes" }).last()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Laptops" }).last()).toBeVisible();
+  });
+
   test("busca por texto y filtra por condición", async ({ page }) => {
     const producto = await productoPorSlug("corsair-vengeance-32gb-ddr5-6000");
     const restaurar = await ajustarProducto(producto.id, { condicion: "usado" });

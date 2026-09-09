@@ -205,29 +205,34 @@ export type FiltrosCatalogo = {
  * también RAM, gráficas y almacenamiento.
  */
 export async function obtenerProductos(
-  categoria: Categoria,
+  categoria: Categoria | null,
   filtros: FiltrosCatalogo = {},
 ): Promise<ProductoListado[]> {
   const supabase = await crearClienteServidor();
 
-  const subcategorias = await obtenerSubcategorias(categoria.id);
-  const idsDisponibles = [categoria.id, ...subcategorias.map((c) => c.id)];
-
-  // El filtro "Tipo" del sidebar restringe a subcategorías concretas.
-  const idsFiltrados =
-    filtros.tipos && filtros.tipos.length > 0
-      ? subcategorias
-          .filter((c) => filtros.tipos!.includes(c.slug))
-          .map((c) => c.id)
-      : idsDisponibles;
-
-  if (idsFiltrados.length === 0) return [];
-
   let consulta = supabase
     .from("productos")
     .select(CAMPOS_LISTADO)
-    .eq("activo", true)
-    .in("categoria_id", idsFiltrados);
+    .eq("activo", true);
+
+  // Sin categoría se busca en toda la tienda. Es lo que hace el buscador de
+  // la barra: quien escribe «lenovo» quiere la Lenovo, no la Lenovo que
+  // además esté en la sección donde se quedó parado.
+  if (categoria) {
+    const subcategorias = await obtenerSubcategorias(categoria.id);
+    const idsDisponibles = [categoria.id, ...subcategorias.map((c) => c.id)];
+
+    // El filtro "Tipo" del sidebar restringe a subcategorías concretas.
+    const idsFiltrados =
+      filtros.tipos && filtros.tipos.length > 0
+        ? subcategorias
+            .filter((c) => filtros.tipos!.includes(c.slug))
+            .map((c) => c.id)
+        : idsDisponibles;
+
+    if (idsFiltrados.length === 0) return [];
+    consulta = consulta.in("categoria_id", idsFiltrados);
+  }
 
   if (filtros.busqueda) {
     // Coincidencia por nombre o resumen. El índice de texto completo en

@@ -47,7 +47,7 @@ export function BuscadorMovil() {
     // El formulario navega solo: es un GET a la misma dirección que usa el
     // buscador de escritorio, así funciona igual sin sesión y sin JavaScript.
     <form
-      action="/componentes"
+      action="/buscar"
       className="bg-fondo absolute inset-x-0 top-0 z-40 flex h-16 items-center gap-2 px-6 md:hidden"
     >
       <input

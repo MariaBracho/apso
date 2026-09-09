@@ -38,7 +38,7 @@ export function BarraSuperior({
 
         <NavCategorias categorias={categorias} variante="barra" />
 
-        <form action="/componentes" className="ml-auto hidden md:block">
+        <form action="/buscar" className="ml-auto hidden md:block">
           <input
             type="search"
             name="q"
