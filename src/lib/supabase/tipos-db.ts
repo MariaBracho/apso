@@ -316,6 +316,60 @@ export type Database = {
           },
         ]
       }
+      gastos: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_gasto"]
+          creado_en: string
+          descripcion: string
+          fecha: string
+          id: string
+          metodo: Database["public"]["Enums"]["metodo_pago"] | null
+          monto_usd: number
+          pedido_id: string | null
+          registrado_por: string | null
+          tasa_cambio: number
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["categoria_gasto"]
+          creado_en?: string
+          descripcion: string
+          fecha?: string
+          id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pago"] | null
+          monto_usd: number
+          pedido_id?: string | null
+          registrado_por?: string | null
+          tasa_cambio: number
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_gasto"]
+          creado_en?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pago"] | null
+          monto_usd?: number
+          pedido_id?: string | null
+          registrado_por?: string | null
+          tasa_cambio?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marcas: {
         Row: {
           activa: boolean
@@ -929,6 +983,17 @@ export type Database = {
       tasa_vigente: { Args: never; Returns: number }
     }
     Enums: {
+      categoria_gasto:
+        | "flete_internacional"
+        | "aduana"
+        | "transporte_local"
+        | "comision_pago"
+        | "empaque"
+        | "publicidad"
+        | "sueldos"
+        | "alquiler"
+        | "servicios"
+        | "otro"
       condicion_producto: "nuevo" | "reacondicionado" | "usado"
       estado_pago: "en_espera" | "verificado" | "rechazado"
       estado_pedido:
@@ -1092,6 +1157,18 @@ export const Constants = {
   },
   public: {
     Enums: {
+      categoria_gasto: [
+        "flete_internacional",
+        "aduana",
+        "transporte_local",
+        "comision_pago",
+        "empaque",
+        "publicidad",
+        "sueldos",
+        "alquiler",
+        "servicios",
+        "otro",
+      ],
       condicion_producto: ["nuevo", "reacondicionado", "usado"],
       estado_pago: ["en_espera", "verificado", "rechazado"],
       estado_pedido: [

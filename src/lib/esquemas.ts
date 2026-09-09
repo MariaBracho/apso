@@ -1,5 +1,6 @@
 import * as yup from "yup";
 
+import { CATEGORIAS_GASTO } from "@/lib/gasto";
 import { CONDICIONES, RESPALDOS } from "@/lib/producto";
 import { ESTADOS, esDestinoValido } from "@/lib/venezuela";
 
@@ -225,6 +226,89 @@ export const esquemaPrecios = yup.object({
 
 export type DatosPrecios = yup.InferType<typeof esquemaPrecios>;
 
+
+// ---------------------------------------------------------------------------
+// Caja: pagos que entran y gastos que salen
+// ---------------------------------------------------------------------------
+
+const METODOS_PAGO = [
+  "pago_movil",
+  "transferencia_bs",
+  "zelle",
+  "binance",
+  "efectivo",
+  "tarjeta_internacional",
+] as const;
+
+/**
+ * Un pago de un pedido.
+ *
+ * El monto se escribe en la moneda del método: bolívares para Pago Móvil y
+ * transferencia, dólares para el resto. Convertirlo es del servidor, con la
+ * tasa que se guarda al lado.
+ */
+export const esquemaPago = yup.object({
+  monto: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El monto tiene que ser un número.")
+    .required("Escribe el monto.")
+    .positive("El monto tiene que ser mayor que cero."),
+  metodo: yup
+    .string()
+    .oneOf(METODOS_PAGO)
+    .required("Di por dónde entró el pago."),
+  // La referencia es lo que permite reconocer un comprobante repetido, así que
+  // se pide para todo lo que no sea efectivo en mano.
+  referencia: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .when("metodo", {
+      is: "efectivo",
+      otherwise: (esquema) =>
+        esquema.required("Pon la referencia del pago."),
+    }),
+});
+
+export type DatosPago = yup.InferType<typeof esquemaPago>;
+
+/**
+ * Un gasto.
+ *
+ * Igual que el pago: el monto va en la moneda del método. La fecha es la del
+ * gasto y no la de cuando se anota, porque se cargan en lote y todos caerían
+ * el mismo día.
+ */
+export const esquemaGasto = yup.object({
+  fecha: yup
+    .string()
+    .required("Pon la fecha del gasto.")
+    .matches(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida."),
+  categoria: yup
+    .string()
+    .oneOf(CATEGORIAS_GASTO)
+    .required("Elige la categoría."),
+  descripcion: yup
+    .string()
+    .trim()
+    .required("Di en qué se gastó.")
+    .max(200, "La descripción no puede pasar de 200 caracteres."),
+  monto: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El monto tiene que ser un número.")
+    .required("Escribe el monto.")
+    .positive("El monto tiene que ser mayor que cero."),
+  metodo: yup
+    .string()
+    .oneOf(METODOS_PAGO)
+    .required("Di de dónde salió la plata."),
+});
+
+export type DatosGasto = yup.InferType<typeof esquemaGasto>;
 
 // ---------------------------------------------------------------------------
 // Perfil del cliente

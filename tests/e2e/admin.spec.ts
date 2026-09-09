@@ -714,3 +714,113 @@ test.describe("Costo del stock que ya está", () => {
     }
   });
 });
+
+test.describe("Caja", () => {
+  /**
+   * Lo que responde «cuánto hay en caja».
+   *
+   * El monto se escribe en la moneda del método y el servidor lo lleva a
+   * dólares: un Pago Móvil de Bs 82.000 son 100 dólares, no 82.000. Guardarlo
+   * sin convertir metería una fortuna en la caja.
+   */
+  test("un pago en bolívares entra convertido, y el saldo va por método", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+    const tasa = await tasaVigente();
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Cómo pagó").selectOption("pago_movil");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+    const { data: pedido } = await db.from("pedidos").select("id, total_usd").eq("numero", numero).single();
+
+    try {
+      // Antes de cobrar, el pedido dice cuánto falta.
+      await expect(page.getByText(/Faltan \$/)).toBeVisible();
+
+      const enBolivares = Math.round(Number(pedido!.total_usd) * tasa);
+      await page.getByRole("button", { name: "Registrar pago" }).click();
+      await page.getByLabel("Cómo pagó").last().selectOption("pago_movil");
+      await page.getByLabel(/Monto en bolívares/).fill(String(enBolivares));
+      await page.getByLabel(/^Referencia/).fill("001122334455");
+      await page.getByRole("button", { name: "Guardar pago" }).click();
+      await expect(page.getByText("Pago registrado")).toBeVisible();
+
+      // Se guardó en dólares, no en bolívares.
+      const { data: pago } = await db
+        .from("pagos")
+        .select("monto_usd, metodo, tasa_cambio, estado")
+        .eq("pedido_id", pedido!.id)
+        .single();
+      expect(Number(pago!.monto_usd)).toBeCloseTo(Number(pedido!.total_usd), 1);
+      expect(Number(pago!.tasa_cambio)).toBeCloseTo(tasa, 2);
+      expect(pago!.estado).toBe("verificado");
+
+      await expect(page.getByText("Cobrado completo")).toBeVisible();
+
+      // Y sale en la caja, atribuido a su método.
+      await page.goto("/admin/caja");
+      await expect(page.getByRole("heading", { name: "Caja" })).toBeVisible();
+      const fila = page.getByRole("listitem").filter({ hasText: "Pago Móvil" });
+      await expect(fila).toContainText(
+        `$${Number(pago!.monto_usd).toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`,
+      );
+    } finally {
+      await db.from("pagos").delete().eq("pedido_id", pedido!.id);
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  /**
+   * Un gasto en bolívares también se convierte, y resta del neto: sin gastos
+   * el margen se lee como si fuera lo que quedó.
+   */
+  test("un gasto resta de la caja y se puede borrar", async ({ page }) => {
+    const tasa = await tasaVigente();
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/caja");
+
+    await page.getByLabel("Categoría del gasto").selectOption("aduana");
+    await page.getByLabel(/En qué se gastó/).fill("Aduana del lote de prueba");
+    await page.getByLabel("De dónde salió la plata").selectOption("transferencia_bs");
+    await page.getByLabel(/Monto en bolívares/).fill(String(Math.round(50 * tasa)));
+    await page.getByRole("button", { name: "Anotar gasto" }).click();
+    await expect(page.getByText("Gasto anotado")).toBeVisible();
+
+    try {
+      const { data } = await db
+        .from("gastos")
+        .select("id, monto_usd, categoria, metodo")
+        .eq("descripcion", "Aduana del lote de prueba")
+        .single();
+
+      expect(Number(data!.monto_usd)).toBeCloseTo(50, 1);
+      expect(data!.categoria).toBe("aduana");
+
+      await expect(page.getByText("Aduana del lote de prueba")).toBeVisible();
+      await expect(page.getByText(/en gastos/)).toBeVisible();
+
+      // Un gasto mal anotado descuadra la caja, así que se quita.
+      await page
+        .getByRole("button", { name: /borrar el gasto «Aduana del lote de prueba»/i })
+        .click();
+      await expect(page.getByText(/fuera de la caja/)).toBeVisible();
+
+      const { data: despues } = await db
+        .from("gastos")
+        .select("id")
+        .eq("descripcion", "Aduana del lote de prueba");
+      expect(despues).toHaveLength(0);
+    } finally {
+      await db.from("gastos").delete().eq("descripcion", "Aduana del lote de prueba");
+    }
+  });
+});

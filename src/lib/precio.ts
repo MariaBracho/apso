@@ -164,3 +164,71 @@ export function calcularComision(
     itemsSinCosto,
   };
 }
+
+/**
+ * Un monto cobrado o pagado, llevado a dólares.
+ *
+ * Se escribe en la moneda del método: quien paga por Pago Móvil pone
+ * bolívares, quien paga en efectivo pone dólares. Guardar siempre en dólares
+ * es lo que permite sumar los dos, y la tasa del día queda junto al monto para
+ * poder reconstruir lo que se movió de verdad.
+ */
+export function aUsd(monto: number, metodo: string, tasa: number): number {
+  if (esPagoEnDivisa(metodo)) return Math.round(monto * 100) / 100;
+  if (tasa <= 0) return 0;
+
+  return Math.round((monto / tasa) * 100) / 100;
+}
+
+export type MovimientoCaja = {
+  /** Nulo cuando no se sabe de dónde salió o entró. */
+  metodo: string | null;
+  montoUsd: number;
+  /** 1 lo que entra, −1 lo que sale. */
+  signo: 1 | -1;
+};
+
+/**
+ * El saldo de cada método de cobro.
+ *
+ * Por método y no un total único porque «cuánto hay en caja» no es un número:
+ * el efectivo del mostrador, el saldo de Zelle y los bolívares del banco son
+ * plata distinta y no se pueden mezclar para decidir con qué se paga algo.
+ *
+ * Lo que no tiene método se suma aparte en `sinMetodo`: descartarlo haría que
+ * la suma de los saldos no cuadre con el neto.
+ */
+export function saldosPorMetodo(movimientos: MovimientoCaja[]): {
+  porMetodo: Record<string, number>;
+  sinMetodo: number;
+  entro: number;
+  salio: number;
+  neto: number;
+} {
+  const porMetodo: Record<string, number> = {};
+  let sinMetodo = 0;
+  let entro = 0;
+  let salio = 0;
+
+  for (const m of movimientos) {
+    if (m.signo === 1) entro += m.montoUsd;
+    else salio += m.montoUsd;
+
+    const delta = m.montoUsd * m.signo;
+    if (m.metodo === null) sinMetodo += delta;
+    else porMetodo[m.metodo] = (porMetodo[m.metodo] ?? 0) + delta;
+  }
+
+  const redondear = (n: number) => Math.round(n * 100) / 100;
+  for (const clave of Object.keys(porMetodo)) {
+    porMetodo[clave] = redondear(porMetodo[clave]);
+  }
+
+  return {
+    porMetodo,
+    sinMetodo: redondear(sinMetodo),
+    entro: redondear(entro),
+    salio: redondear(salio),
+    neto: redondear(entro - salio),
+  };
+}

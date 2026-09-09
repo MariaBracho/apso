@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BloqueSeriales } from "@/components/admin/bloque-seriales";
 import { ControlEstado } from "@/components/admin/control-estado";
+import { BloquePagos } from "@/components/admin/bloque-pagos";
 import { SelectorVendedor } from "@/components/admin/selector-vendedor";
 import { FotoProducto } from "@/components/tienda/foto-producto";
 import {
@@ -11,6 +12,8 @@ import {
   listarVendedores,
   obtenerPedido,
 } from "@/lib/admin";
+import { pagosDePedido } from "@/lib/caja";
+import { obtenerTasaVigente } from "@/lib/catalogo";
 import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
@@ -25,9 +28,11 @@ export default async function PaginaPedido({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [pedido, vendedores] = await Promise.all([
+  const [pedido, vendedores, cobros, tasaHoy] = await Promise.all([
     obtenerPedido(id),
     listarVendedores(),
+    pagosDePedido(id),
+    obtenerTasaVigente(),
   ]);
   if (!pedido) notFound();
 
@@ -105,6 +110,14 @@ export default async function PaginaPedido({
               No indicó para qué lo va a usar.
             </p>
           )}
+
+          <BloquePagos
+            pedidoId={pedido.id}
+            totalUsd={total}
+            pagos={cobros.pagos}
+            cobrado={cobros.cobrado}
+            tasa={tasaHoy}
+          />
 
           <BloqueSeriales items={pedido.items} />
         </div>
