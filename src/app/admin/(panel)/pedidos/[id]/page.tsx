@@ -4,8 +4,13 @@ import { notFound } from "next/navigation";
 
 import { BloqueSeriales } from "@/components/admin/bloque-seriales";
 import { ControlEstado } from "@/components/admin/control-estado";
+import { SelectorVendedor } from "@/components/admin/selector-vendedor";
 import { FotoProducto } from "@/components/tienda/foto-producto";
-import { obtenerPedido } from "@/lib/admin";
+import {
+  type Vendedor,
+  listarVendedores,
+  obtenerPedido,
+} from "@/lib/admin";
 import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
@@ -20,7 +25,10 @@ export default async function PaginaPedido({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const pedido = await obtenerPedido(id);
+  const [pedido, vendedores] = await Promise.all([
+    obtenerPedido(id),
+    listarVendedores(),
+  ]);
   if (!pedido) notFound();
 
   const estado = pedido.estado as EstadoPedido;
@@ -102,7 +110,7 @@ export default async function PaginaPedido({
         </div>
 
         <aside className="space-y-8">
-          <Cliente pedido={pedido} />
+          <Cliente pedido={pedido} vendedores={vendedores} />
           <Historial eventos={pedido.eventos} />
         </aside>
       </div>
@@ -185,8 +193,10 @@ function Productos({
 
 function Cliente({
   pedido,
+  vendedores,
 }: {
   pedido: Awaited<ReturnType<typeof obtenerPedido>> & object;
+  vendedores: Vendedor[];
 }) {
   return (
     <section>
@@ -210,6 +220,15 @@ function Cliente({
         {pedido.es_encargo && pedido.plazo_encargo_dias && (
           <Dato termino="Plazo" valor={`${pedido.plazo_encargo_dias} días`} />
         )}
+
+        {/* Quién lo atiende decide de quién es la comisión, así que se puede
+            corregir: se pone solo con quien mueve el estado, y eso no siempre
+            es quien vendió. */}
+        <SelectorVendedor
+          pedidoId={pedido.id}
+          actual={pedido.atendido_por}
+          vendedores={vendedores}
+        />
       </dl>
     </section>
   );

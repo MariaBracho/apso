@@ -182,6 +182,7 @@ export type PedidoDetalle = {
   subtotal_usd: number;
   total_usd: number;
   inventario_descontado: boolean;
+  atendido_por: string | null;
   creado_en: string;
   confirmado_en: string | null;
   entregado_en: string | null;
@@ -209,7 +210,8 @@ export async function obtenerPedido(id: string): Promise<PedidoDetalle | null> {
       `id, numero, cliente_nombre, cliente_whatsapp, cliente_correo, estado, origen,
        es_encargo, plazo_encargo_dias, entrega, ciudad_destino, estado_destino, metodo_pago,
        para_que_lo_usa, motivo_cancelacion, tasa_cambio, subtotal_usd,
-       total_usd, inventario_descontado, creado_en, confirmado_en, entregado_en,
+       total_usd, inventario_descontado, atendido_por, creado_en, confirmado_en,
+       entregado_en,
        items:pedido_items (
          id, nombre_producto, cantidad, precio_usd_unitario,
          producto:productos (stock, ${CAMPOS_PRODUCTO_EN_PEDIDO}),
@@ -346,4 +348,25 @@ export async function listarMarcasAdmin(): Promise<MarcaAdmin[]> {
       (marca.productos as unknown as { count: number }[] | null)?.[0]?.count ??
       0,
   }));
+}
+
+export type Vendedor = { id: string; nombre: string };
+
+/**
+ * Quiénes pueden quedar como vendedor de un pedido.
+ *
+ * Los admins, que son los que atienden. Hoy es una sola persona; existe la
+ * lista porque el día que entre alguien más no hay que cambiar nada, y porque
+ * un pedido atendido por quien no vendió atribuye la comisión al equivocado.
+ */
+export async function listarVendedores(): Promise<Vendedor[]> {
+  const supabase = await crearClienteServidor();
+
+  const { data } = await supabase
+    .from("perfiles")
+    .select("id, nombre")
+    .eq("rol", "admin")
+    .order("nombre");
+
+  return data ?? [];
 }

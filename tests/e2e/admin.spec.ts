@@ -494,3 +494,87 @@ test.describe("Comisiones", () => {
     }
   });
 });
+
+test.describe("Quién atiende el pedido", () => {
+  /**
+   * Se puede corregir, y la comisión va detrás.
+   *
+   * `atendido_por` se pone solo con quien mueve el estado, y eso no siempre es
+   * quien vendió: alguien vende y otro despacha. Sin poder cambiarlo, la
+   * comisión se le paga al equivocado.
+   */
+  test("cambiar de vendedor mueve la comisión, salvo si ya se pagó", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    // Hace falta un segundo vendedor: con uno solo no hay nada que elegir.
+    const { data: otro } = await db
+      .from("perfiles")
+      .select("id, nombre, rol")
+      .neq("correo", "admin@apso.com.ve")
+      .limit(1)
+      .single();
+    await db.from("perfiles").update({ rol: "admin" }).eq("id", otro!.id);
+
+    await db.rpc("mover_inventario", {
+      p_producto: producto.id, p_cantidad: 3, p_motivo: "entrada", p_costo: 60,
+    });
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    const { data: pedido } = await db.from("pedidos").select("id").eq("numero", numero).single();
+
+    try {
+      // Nace con quien lo registró, y la comisión también.
+      const selector = page.getByLabel("Quién atiende este pedido");
+      await expect(selector).toBeVisible();
+
+      await selector.selectOption(otro!.id);
+      await expect(page.getByText("La comisión de este pedido va con él.")).toBeVisible();
+
+      const { data: movida } = await db
+        .from("comisiones")
+        .select("perfil_id")
+        .eq("pedido_id", pedido!.id)
+        .single();
+      expect(movida!.perfil_id).toBe(otro!.id);
+
+      // Una vez pagada ya no se mueve: ese dinero salió, y cambiarla de dueño
+      // descuadraría la liquidación de ese mes.
+      await db
+        .from("comisiones")
+        .update({ pagada_en: new Date().toISOString(), pagada_por: otro!.id })
+        .eq("pedido_id", pedido!.id);
+
+      await page.reload();
+      const { data: admin } = await db
+        .from("perfiles").select("id").eq("correo", "admin@apso.com.ve").single();
+      await page.getByLabel("Quién atiende este pedido").selectOption(admin!.id);
+      await expect(
+        page.getByText("La comisión ya estaba pagada, así que se queda con quien la cobró."),
+      ).toBeVisible();
+
+      const { data: quieta } = await db
+        .from("comisiones").select("perfil_id").eq("pedido_id", pedido!.id).single();
+      expect(quieta!.perfil_id).toBe(otro!.id);
+
+      // El pedido sí cambió de manos, que es un hecho aparte de la comisión.
+      const { data: reasignado } = await db
+        .from("pedidos").select("atendido_por").eq("id", pedido!.id).single();
+      expect(reasignado!.atendido_por).toBe(admin!.id);
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+      await db.from("perfiles").update({ rol: otro!.rol }).eq("id", otro!.id);
+    }
+  });
+});

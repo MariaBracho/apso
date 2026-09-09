@@ -318,3 +318,71 @@ export async function agregarExistencias(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/**
+ * Cambia a quién se le atribuye el pedido.
+ *
+ * `atendido_por` se pone solo con quien mueve el estado, que casi siempre es
+ * quien vendió — pero no siempre: alguien vende y otro despacha, o se registra
+ * a mano una venta que hizo otra persona. Sin poder corregirlo, la comisión se
+ * le paga al equivocado.
+ *
+ * La comisión se mueve con el pedido solo si no se ha pagado. Una ya liquidada
+ * se queda con quien la cobró: ese dinero salió, y moverla de dueño haría que
+ * la liquidación de ese mes dejara de cuadrar. Se avisa cuando pasa.
+ */
+export async function cambiarVendedor(
+  pedidoId: string,
+  perfilId: string,
+): Promise<{ error: string } | { ok: true; comisionMovida: boolean }> {
+  await exigirAdmin();
+
+  const supabase = await crearClienteServidor();
+
+  // Que sea admin se comprueba aquí y no solo en el selector: la acción se
+  // puede llamar sin pasar por la pantalla.
+  const { data: vendedor } = await supabase
+    .from("perfiles")
+    .select("id, nombre, rol")
+    .eq("id", perfilId)
+    .maybeSingle();
+
+  if (!vendedor || vendedor.rol !== "admin") {
+    return { error: "Esa persona no atiende pedidos." };
+  }
+
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ atendido_por: perfilId })
+    .eq("id", pedidoId);
+
+  if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+  const { data: movidas } = await supabase
+    .from("comisiones")
+    .update({ perfil_id: perfilId })
+    .eq("pedido_id", pedidoId)
+    .is("pagada_en", null)
+    .select("id");
+
+  const { data: pendiente } = await supabase
+    .from("comisiones")
+    .select("id")
+    .eq("pedido_id", pedidoId)
+    .maybeSingle();
+
+  await supabase.from("pedido_eventos").insert({
+    pedido_id: pedidoId,
+    descripcion: `Pasa a atenderlo ${vendedor.nombre}`,
+    autor_id: (await exigirAdmin()).id,
+  });
+
+  revalidatePath(`/admin/pedidos/${pedidoId}`);
+  revalidatePath("/admin/comisiones");
+
+  return {
+    ok: true,
+    // Falso cuando había comisión y no se movió: es que ya estaba pagada.
+    comisionMovida: !pendiente || (movidas?.length ?? 0) > 0,
+  };
+}
