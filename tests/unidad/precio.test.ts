@@ -98,6 +98,17 @@ describe("margenDe", () => {
     expect(margen?.monto).toBe(42);
     // 42 de 120, no 42 de 78: es como se lee un margen de tienda.
     expect(margen?.porcentaje).toBe(35);
+    // Sin comisión pedida no se descuenta nada.
+    expect(margen?.comision).toBe(0);
+    expect(margen?.neto).toBe(42);
+  });
+
+  it("la comisión sale del margen, no del precio", () => {
+    const margen = margenDe(120, 78, 10);
+
+    // 10 % de 42, no de 120.
+    expect(margen?.comision).toBe(4.2);
+    expect(margen?.neto).toBe(37.8);
   });
 
   /**
@@ -115,8 +126,26 @@ describe("margenDe", () => {
     expect(margen?.porcentaje).toBe(-30);
   });
 
+  /** Nadie le cobra comisión a quien vendió algo con pérdida. */
+  it("sin ganancia no hay comisión, ni siquiera negativa", () => {
+    const margen = margenDe(100, 130, 10);
+
+    expect(margen?.comision).toBe(0);
+    expect(margen?.neto).toBe(-30);
+  });
+
   it("con costo cero el margen es todo el precio, no un error", () => {
-    expect(margenDe(50, 0)).toEqual({ monto: 50, porcentaje: 100 });
+    expect(margenDe(50, 0)).toEqual({
+      monto: 50,
+      porcentaje: 100,
+      comision: 0,
+      neto: 50,
+    });
+  });
+
+  it("redondea la comisión a dos decimales, que es como se paga", () => {
+    // 10 % de 23,79 son 2,379: si no se redondea, la nómina no cuadra.
+    expect(margenDe(100, 76.21, 10)?.comision).toBe(2.38);
   });
 
   it("un precio en cero no divide entre cero", () => {

@@ -63,6 +63,7 @@ export async function fijarPrecios(datos: DatosPrecios): Promise<EstadoTasa> {
     .update({
       recargo_bs_pct: resultado.valores.recargo_bs_pct,
       mostrar_precio_divisa: resultado.valores.mostrar_precio_divisa,
+      comision_venta_pct: resultado.valores.comision_venta_pct,
       actualizado_en: new Date().toISOString(),
       actualizado_por: sesion.id,
     })

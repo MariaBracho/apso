@@ -212,6 +212,15 @@ export const esquemaPrecios = yup.object({
   // Solo cambia lo que se anuncia en el catálogo y la ficha. Lo que se cobra
   // sigue dependiendo del método de pago.
   mostrar_precio_divisa: yup.boolean().required(),
+
+  comision_venta_pct: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("La comisión tiene que ser un número.")
+    .required("Escribe la comisión.")
+    .min(0, "La comisión no puede ser negativa.")
+    // Más del margen entero sería pagar por vender.
+    .max(100, "La comisión no puede pasar del 100 % del margen."),
 });
 
 export type DatosPrecios = yup.InferType<typeof esquemaPrecios>;

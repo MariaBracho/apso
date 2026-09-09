@@ -325,11 +325,19 @@ test.describe("Costo de compra", () => {
       expect(Number(data!.costo_promedio_usd)).toBeCloseTo(60, 2);
       expect(data!.unidades_con_costo).toBe(5);
 
-      // Y el margen sale en el inventario, contra el precio en divisas.
+      // Y el margen sale en el inventario, contra el precio en divisas, con
+      // la comisión descontada al lado.
       await page.reload();
       const margen = producto.precio_usd - 60;
       const porcentaje = Math.round((margen / producto.precio_usd) * 100);
       await expect(fila).toContainText(`${porcentaje} %`);
+
+      const { data: ajustes } = await db
+        .from("ajustes")
+        .select("comision_venta_pct")
+        .single();
+      const comision = Math.round(margen * (Number(ajustes!.comision_venta_pct) / 100) * 100) / 100;
+      await expect(fila).toContainText(`comisión $${comision.toLocaleString("es-VE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
     } finally {
       await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
       await db.from("productos").update({ stock: antes }).eq("id", producto.id);

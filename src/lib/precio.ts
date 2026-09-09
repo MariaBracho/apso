@@ -72,10 +72,14 @@ export function aDivisa(precioBolivares: number, recargoPct: number): number {
 }
 
 export type Margen = {
-  /** Lo que queda por unidad, en dólares. */
+  /** Lo que queda por unidad, en dólares, antes de la comisión. */
   monto: number;
   /** Sobre el precio de venta, que es como se lee un margen de tienda. */
   porcentaje: number;
+  /** Lo que se lleva quien vendió. Cero si no hay ganancia que repartir. */
+  comision: number;
+  /** Lo que queda para la tienda una vez pagada la comisión. */
+  neto: number;
 };
 
 /**
@@ -85,19 +89,31 @@ export type Margen = {
  * bien ahí, da bien cobrando en bolívares. Al revés se vería un margen que
  * desaparece en cuanto alguien paga en efectivo.
  *
+ * La comisión se calcula sobre lo que se gana y no sobre lo que se cobra:
+ * pagarla sobre la venta de algo que dejó poco margen saldría de la ganancia
+ * de la tienda.
+ *
  * Devuelve null sin costo cargado. Un margen inventado es peor que ninguno:
  * con él se decide qué comprar y a cuánto vender.
  */
 export function margenDe(
   precioDivisa: number,
   costoUsd: number | null,
+  comisionPct = 0,
 ): Margen | null {
   if (costoUsd === null || precioDivisa <= 0) return null;
 
   const monto = Math.round((precioDivisa - costoUsd) * 100) / 100;
 
+  // Sin ganancia no hay comisión. Calcularla sobre un margen negativo la
+  // volvería negativa, y nadie le cobra a quien vende algo con pérdida.
+  const comision =
+    monto > 0 ? Math.round(monto * (comisionPct / 100) * 100) / 100 : 0;
+
   return {
     monto,
     porcentaje: Math.round((monto / precioDivisa) * 100),
+    comision,
+    neto: Math.round((monto - comision) * 100) / 100,
   };
 }

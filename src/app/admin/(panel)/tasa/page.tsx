@@ -26,7 +26,7 @@ export default async function PaginaTasa() {
       .limit(15),
     supabase
       .from("ajustes")
-      .select("recargo_bs_pct, mostrar_precio_divisa")
+      .select("recargo_bs_pct, mostrar_precio_divisa, comision_venta_pct")
       .maybeSingle(),
   ]);
 
@@ -34,6 +34,7 @@ export default async function PaginaTasa() {
   const vigente = tasas[0];
   const recargo = Number(ajustes?.recargo_bs_pct ?? 0);
   const mostrarDivisa = ajustes?.mostrar_precio_divisa ?? false;
+  const comision = Number(ajustes?.comision_venta_pct ?? 0);
 
   return (
     <div className="mx-auto max-w-2xl px-8 py-10">
@@ -61,7 +62,11 @@ export default async function PaginaTasa() {
 
       <div className="space-y-10">
         <FormularioTasa />
-        <FormularioPrecios recargo={recargo} mostrarDivisa={mostrarDivisa} />
+        <FormularioPrecios
+          recargo={recargo}
+          mostrarDivisa={mostrarDivisa}
+          comision={comision}
+        />
       </div>
 
       {tasas.length > 1 && (

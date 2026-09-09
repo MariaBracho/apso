@@ -38,6 +38,7 @@ export type Database = {
         Row: {
           actualizado_en: string
           actualizado_por: string | null
+          comision_venta_pct: number
           id: boolean
           mostrar_precio_divisa: boolean
           recargo_bs_pct: number
@@ -45,6 +46,7 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           actualizado_por?: string | null
+          comision_venta_pct?: number
           id?: boolean
           mostrar_precio_divisa?: boolean
           recargo_bs_pct?: number
@@ -52,6 +54,7 @@ export type Database = {
         Update: {
           actualizado_en?: string
           actualizado_por?: string | null
+          comision_venta_pct?: number
           id?: boolean
           mostrar_precio_divisa?: boolean
           recargo_bs_pct?: number
@@ -842,28 +845,17 @@ export type Database = {
     }
     Functions: {
       es_admin: { Args: never; Returns: boolean }
-      mover_inventario:
-        | {
-            Args: {
-              p_cantidad: number
-              p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
-              p_nota?: string
-              p_pedido?: string
-              p_producto: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_cantidad: number
-              p_costo?: number
-              p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
-              p_nota?: string
-              p_pedido?: string
-              p_producto: string
-            }
-            Returns: number
-          }
+      mover_inventario: {
+        Args: {
+          p_cantidad: number
+          p_costo?: number
+          p_motivo: Database["public"]["Enums"]["motivo_movimiento"]
+          p_nota?: string
+          p_pedido?: string
+          p_producto: string
+        }
+        Returns: number
+      }
       reclamar_pedidos_por_whatsapp: { Args: never; Returns: number }
       tasa_vigente: { Args: never; Returns: number }
     }

@@ -79,6 +79,8 @@ export type Ajustes = {
    * muestran siempre porque ahí ya se eligió el método.
    */
   mostrarDivisa: boolean;
+  /** Porcentaje del margen que se lleva quien vende. */
+  comision: number;
 };
 
 export async function obtenerAjustes(): Promise<Ajustes> {
@@ -86,7 +88,7 @@ export async function obtenerAjustes(): Promise<Ajustes> {
 
   const { data, error } = await supabase
     .from("ajustes")
-    .select("recargo_bs_pct, mostrar_precio_divisa")
+    .select("recargo_bs_pct, mostrar_precio_divisa, comision_venta_pct")
     .maybeSingle();
 
   avisarFallo("ajustes de la tienda", error);
@@ -96,6 +98,7 @@ export async function obtenerAjustes(): Promise<Ajustes> {
     // Sin fila, sin anuncio: es preferible no prometer un descuento a
     // prometerlo por un fallo de lectura.
     mostrarDivisa: data?.mostrar_precio_divisa ?? false,
+    comision: Number(data?.comision_venta_pct ?? 0),
   };
 }
 

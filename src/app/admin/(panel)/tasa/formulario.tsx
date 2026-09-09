@@ -104,9 +104,11 @@ export function FormularioTasa() {
 export function FormularioPrecios({
   recargo,
   mostrarDivisa,
+  comision,
 }: {
   recargo: number;
   mostrarDivisa: boolean;
+  comision: number;
 }) {
   const {
     register,
@@ -117,6 +119,7 @@ export function FormularioPrecios({
     defaultValues: {
       recargo_bs_pct: recargo,
       mostrar_precio_divisa: mostrarDivisa,
+      comision_venta_pct: comision,
     },
     mode: "onBlur",
   });
@@ -133,9 +136,7 @@ export function FormularioPrecios({
     }
 
     toast.success("Precios guardados", {
-      description: datos.mostrar_precio_divisa
-        ? `Recargo del ${datos.recargo_bs_pct} % y el precio en divisas a la vista.`
-        : `Recargo del ${datos.recargo_bs_pct} %. El precio en divisas no se anuncia.`,
+      description: `Recargo del ${datos.recargo_bs_pct} %, comisión del ${datos.comision_venta_pct} % del margen.`,
     });
   });
 
@@ -166,6 +167,30 @@ export function FormularioPrecios({
           Cambia el precio en bolívares de todo el catálogo de inmediato. El
           precio en divisas no se toca: ese es el que está cargado en cada
           producto. Los pedidos ya hechos tampoco se mueven.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <div className="sm:w-56">
+          <Campo
+            etiqueta="Comisión por venta"
+            ayuda="Porcentaje del margen, no del precio."
+            error={errors.comision_venta_pct?.message}
+          >
+            <input
+              {...register("comision_venta_pct")}
+              inputMode="decimal"
+              placeholder="10"
+              className={
+                errors.comision_venta_pct ? estiloEntradaMal : estiloEntrada
+              }
+            />
+          </Campo>
+        </div>
+        <p className="text-texto-meta max-w-md text-xs leading-relaxed">
+          Es lo que se lleva quien vendió, sobre lo que se gana con el producto
+          y no sobre lo que se cobra. Sale en el inventario junto al margen. Un
+          producto vendido por debajo del costo no paga comisión.
         </p>
       </div>
 
