@@ -117,3 +117,50 @@ export function margenDe(
     neto: Math.round((monto - comision) * 100) / 100,
   };
 }
+
+export type LineaVendida = {
+  cantidad: number;
+  precio_usd_unitario: number;
+  /** Costo promedio del producto ese día. Nulo si nunca se cargó. */
+  costo: number | null;
+};
+
+export type ComisionCalculada = {
+  margen: number;
+  monto: number;
+  /** Líneas que no entraron al margen por no tener costo cargado. */
+  itemsSinCosto: number;
+};
+
+/**
+ * El margen del pedido y la comisión que sale de él.
+ *
+ * Las líneas sin costo se cuentan aparte en vez de entrar como margen cero:
+ * eso último dejaría la comisión corta sin decir por qué, y quien la cobra
+ * pensaría que le pagaron de menos. Contarlas permite avisarlo.
+ */
+export function calcularComision(
+  lineas: LineaVendida[],
+  porcentaje: number,
+): ComisionCalculada {
+  let margen = 0;
+  let itemsSinCosto = 0;
+
+  for (const linea of lineas) {
+    if (linea.costo === null) {
+      itemsSinCosto++;
+      continue;
+    }
+    margen += (linea.precio_usd_unitario - linea.costo) * linea.cantidad;
+  }
+
+  margen = Math.round(margen * 100) / 100;
+
+  return {
+    margen,
+    // Un pedido vendido con pérdida no paga comisión, igual que en el
+    // inventario: nadie le cobra a quien vendió por debajo del costo.
+    monto: margen > 0 ? Math.round(margen * (porcentaje / 100) * 100) / 100 : 0,
+    itemsSinCosto,
+  };
+}

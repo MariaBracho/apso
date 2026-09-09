@@ -8,6 +8,8 @@ import {
   esCancelado,
   inventarioDeberiaEstarDescontado,
 } from "@/lib/estados";
+import { obtenerAjustes } from "@/lib/catalogo";
+import { generarComision, quitarComision } from "@/lib/comisiones";
 import { esquemaSerial, validar } from "@/lib/esquemas";
 import { exigirAdmin } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
@@ -112,6 +114,19 @@ export async function cambiarEstado(
     estado_nuevo: nuevoEstado,
     autor_id: sesion.id,
   });
+
+  // La comisión nace y muere con el mismo corte que el inventario: cuando la
+  // venta se da por buena. Quien la gana es quien atiende el pedido, que es
+  // esta misma sesión — por eso se toma de aquí y no de lo que hubiera antes.
+  if (debeDescontar !== pedido.inventario_descontado) {
+    if (debeDescontar) {
+      const { comision } = await obtenerAjustes();
+      await generarComision(pedidoId, sesion.id, comision);
+    } else {
+      await quitarComision(pedidoId);
+    }
+    revalidatePath("/admin/comisiones");
+  }
 
   revalidatePath("/admin/pedidos");
   revalidatePath(`/admin/pedidos/${pedidoId}`);

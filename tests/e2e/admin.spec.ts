@@ -377,3 +377,120 @@ test.describe("Costo de compra", () => {
     }
   });
 });
+
+test.describe("Comisiones", () => {
+  /**
+   * Lo que de verdad importa: el monto se congela al venderse.
+   *
+   * El del inventario es una estimación que se mueve con cada compra de
+   * mercancía. Si la comisión se recalculara con el costo de hoy, la de una
+   * venta de la semana pasada cambiaría sola y ninguna liquidación cuadraría.
+   */
+  test("la comisión se genera al pagarse y no cambia si después sube el costo", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    // Costo conocido: 5 unidades a 50 $.
+    await db.rpc("mover_inventario", {
+      p_producto: producto.id, p_cantidad: 5, p_motivo: "entrada", p_costo: 50,
+    });
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Cómo pagó").selectOption("efectivo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    try {
+      const { data: ajustes } = await db.from("ajustes").select("comision_venta_pct").single();
+      const pct = Number(ajustes!.comision_venta_pct);
+      const margen = producto.precio_usd - 50;
+
+      const { data: comision } = await db
+        .from("comisiones")
+        .select("monto_usd, margen_usd, porcentaje, items_sin_costo, pagada_en, pedido:pedidos (numero)")
+        .eq("pedidos.numero", numero)
+        .order("creado_en", { ascending: false })
+        .limit(1)
+        .single();
+
+      expect(Number(comision!.margen_usd)).toBeCloseTo(margen, 2);
+      expect(Number(comision!.monto_usd)).toBeCloseTo(Math.round(margen * (pct / 100) * 100) / 100, 2);
+      expect(comision!.items_sin_costo).toBe(0);
+      expect(comision!.pagada_en).toBeNull();
+
+      // Entra mercancía al doble de precio: el promedio sube y la estimación
+      // del inventario cambia, pero esta comisión ya está prometida.
+      await db.rpc("mover_inventario", {
+        p_producto: producto.id, p_cantidad: 5, p_motivo: "entrada", p_costo: 150,
+      });
+
+      const { data: despues } = await db
+        .from("comisiones")
+        .select("monto_usd, margen_usd")
+        .eq("id", (await db.from("comisiones").select("id").order("creado_en", { ascending: false }).limit(1).single()).data!.id)
+        .single();
+
+      expect(Number(despues!.margen_usd)).toBeCloseTo(margen, 2);
+
+      // Y se ve en el módulo, con el botón de liquidar.
+      await page.goto("/admin/comisiones");
+      await expect(page.getByRole("heading", { name: "Comisiones" })).toBeVisible();
+      await expect(page.getByText(numero)).toBeVisible();
+      await expect(page.getByRole("button", { name: /marcar como pagadas/i })).toBeVisible();
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", (await db.from("pedidos").select("id").eq("numero", numero).single()).data!.id);
+      await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  test("liquidar pregunta antes y deja las comisiones como pagadas", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await db.rpc("mover_inventario", {
+      p_producto: producto.id, p_cantidad: 3, p_motivo: "entrada", p_costo: 60,
+    });
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    try {
+      await page.goto("/admin/comisiones");
+      await page.getByRole("button", { name: /marcar como pagadas/i }).click();
+
+      // Pregunta antes: marcar como pagadas no se deshace desde el panel.
+      await expect(page.getByText(/¿Le pagaste/)).toBeVisible();
+      await page.getByRole("button", { name: "Sí, liquidar" }).click();
+      await expect(page.getByText(/liquidados/)).toBeVisible();
+
+      const { data } = await db
+        .from("comisiones")
+        .select("pagada_en, pagada_por")
+        .order("creado_en", { ascending: false })
+        .limit(1)
+        .single();
+
+      expect(data!.pagada_en).not.toBeNull();
+      expect(data!.pagada_por).not.toBeNull();
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", (await db.from("pedidos").select("id").eq("numero", numero).single()).data!.id);
+      await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});
