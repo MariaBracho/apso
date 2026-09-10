@@ -76,6 +76,8 @@ export async function crearProducto(
 
   if (error) return { error: mensajeDeError(error.code, error.message) };
 
+  await guardarCosto(creado.id, datos.costo_usd);
+
   revalidatePath("/admin/productos");
   // A la edición y no al listado: las fotos necesitan un producto que ya
   // exista, así que este es el momento natural para agregarlas.
@@ -102,8 +104,12 @@ export async function actualizarProducto(
 
   if (error) return { error: mensajeDeError(error.code, error.message) };
 
+  // Después del stock: la declaración cubre las existencias que hay, así que
+  // tiene que ver el número ya corregido.
   const fallo = await ajustarStock(id, stock, "Cambiado desde la ficha");
   if (fallo && "error" in fallo) return { error: fallo.error };
+
+  await guardarCosto(id, datos.costo_usd);
 
   revalidatePath("/admin/productos");
   redirect("/admin/productos");
@@ -121,4 +127,28 @@ export async function alternarPublicado(id: string, activo: boolean) {
   await supabase.from("productos").update({ activo }).eq("id", id);
 
   revalidatePath("/admin/productos");
+}
+
+/**
+ * Guarda el costo que se escribió en la ficha.
+ *
+ * No es una columna de `productos`: se registra como la declaración de costo
+ * del inventario que hay, que es de donde sale el promedio. Así el número del
+ * formulario y el del inventario son el mismo, y las compras que se carguen
+ * después lo van moviendo solas.
+ *
+ * Sin existencias no hay a qué ponerle costo y se ignora en silencio: el
+ * producto se guarda igual, y el costo se pide al recibir la mercancía.
+ */
+async function guardarCosto(
+  productoId: string,
+  costoUsd: number | null,
+): Promise<void> {
+  if (costoUsd === null) return;
+
+  const supabase = await crearClienteServidor();
+  await supabase.rpc("declarar_costo_inicial", {
+    p_producto: productoId,
+    p_costo: costoUsd,
+  });
 }

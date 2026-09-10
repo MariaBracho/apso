@@ -668,7 +668,7 @@ test.describe("Costo del stock que ya está", () => {
    * es para mercancía que llega, y usarlo duplicaría las existencias. Sin esto
    * no hay margen ni comisión sobre nada de lo que hay hoy.
    */
-  test("«Poner costo» declara sin mover el stock, y solo una vez", async ({ page }) => {
+  test("«Poner costo» declara sin mover el stock, y corregirlo reemplaza", async ({ page }) => {
     const producto = await productoPorSlug("crucial-p3-plus-1tb");
     const antes = producto.stock;
 
@@ -705,13 +705,25 @@ test.describe("Costo del stock que ya está", () => {
         `${Math.round((margen / producto.precio_usd) * 100)} %`,
       );
 
-      // Declararlo otra vez arrastraría el promedio al último número escrito.
+      // Ya no ofrece cargarlo: ahora se corrige desde la ficha del producto.
       await expect(fila.getByRole("button", { name: "Poner costo" })).toHaveCount(0);
 
+      // Corregirlo reemplaza la declaración en vez de sumar otra: si sumara,
+      // las mismas unidades entrarían dos veces y el promedio se arrastraría
+      // hacia el último número escrito.
       const { error } = await db.rpc("declarar_costo_inicial", {
         p_producto: producto.id, p_costo: 99,
       });
-      expect(error, "la segunda declaración debe rechazarse").not.toBeNull();
+      expect(error).toBeNull();
+
+      const { data: promedio } = await db
+        .from("costos_producto")
+        .select("costo_promedio_usd, unidades_con_costo")
+        .eq("producto_id", producto.id)
+        .single();
+      // 99, no el promedio de 38 y 99.
+      expect(Number(promedio!.costo_promedio_usd)).toBeCloseTo(99, 2);
+      expect(promedio!.unidades_con_costo).toBe(antes);
     } finally {
       await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
       await db.from("productos").update({ stock: antes }).eq("id", producto.id);
@@ -927,6 +939,67 @@ test.describe("La caja cuadra", () => {
       await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
       await borrarPedido(numero);
       await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});
+
+test.describe("Costo desde la ficha del producto", () => {
+  /**
+   * Un costo mal tecleado quedaba grabado para siempre: la base se negaba a
+   * declararlo dos veces para que las mismas unidades no entraran otra vez al
+   * promedio. La intención era buena y el efecto malo.
+   */
+  test("se escribe y se corrige desde el formulario del producto", async ({ page }) => {
+    const producto = await productoPorSlug("crucial-p3-plus-1tb");
+
+    await entrarComoAdmin(page);
+    await page.goto(`/admin/productos/${producto.id}`);
+
+    const campo = page.getByLabel(/Costo de compra/);
+    await expect(campo).toHaveValue("");
+
+    // Se escribe mal a propósito.
+    await campo.fill("380");
+    // El margen sale mientras se teclea: a este precio, eso es pérdida.
+    await expect(page.getByText(/Pierdes/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    await page.waitForURL(/\/admin\/productos$/);
+
+    try {
+      let { data } = await db
+        .from("costos_producto")
+        .select("costo_promedio_usd")
+        .eq("producto_id", producto.id)
+        .single();
+      expect(Number(data!.costo_promedio_usd)).toBeCloseTo(380, 2);
+
+      // Y se corrige: la ficha lo trae y lo reemplaza, no lo suma.
+      await page.goto(`/admin/productos/${producto.id}`);
+      await expect(page.getByLabel(/Costo de compra/)).toHaveValue("380");
+
+      await page.getByLabel(/Costo de compra/).fill("38");
+      await expect(page.getByText(/Margen/)).toBeVisible();
+      await page.getByRole("button", { name: "Guardar cambios" }).click();
+      await page.waitForURL(/\/admin\/productos$/);
+
+      ({ data } = await db
+        .from("costos_producto")
+        .select("costo_promedio_usd")
+        .eq("producto_id", producto.id)
+        .single());
+      // 38, no el promedio de 380 y 38: es una corrección, no un lote nuevo.
+      expect(Number(data!.costo_promedio_usd)).toBeCloseTo(38, 2);
+
+      const { data: movimientos } = await db
+        .from("movimientos_inventario")
+        .select("id")
+        .eq("producto_id", producto.id)
+        .eq("motivo", "inventario_inicial");
+      expect(movimientos).toHaveLength(1);
+    } finally {
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: producto.stock }).eq("id", producto.id);
     }
   });
 });

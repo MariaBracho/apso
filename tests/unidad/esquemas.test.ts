@@ -17,6 +17,7 @@ const PRODUCTO_BASE = {
   descripcion: null,
   especificaciones: [{ clave: "Capacidad", valor: "2 × 16 GB" }],
   precio_usd: 120,
+  costo_usd: null,
   stock: 3,
   dias_encargo: null,
   condicion: "nuevo",

@@ -12,6 +12,7 @@ import {
   obtenerProductoAdmin,
 } from "@/lib/admin";
 import { HistorialInventario } from "@/components/admin/historial-inventario";
+import { costoDe } from "@/lib/caja";
 import { obtenerAjustes } from "@/lib/catalogo";
 
 export const metadata: Metadata = { title: "Editar producto" };
@@ -23,7 +24,7 @@ export default async function PaginaEditarProducto({
 }) {
   const { id } = await params;
 
-  const [producto, categorias, marcas, fotos, { recargo }, movimientos] =
+  const [producto, categorias, marcas, fotos, { recargo, comision }, movimientos] =
     await Promise.all([
       obtenerProductoAdmin(id),
       listarCategorias(),
@@ -34,6 +35,10 @@ export default async function PaginaEditarProducto({
     ]);
 
   if (!producto) notFound();
+
+  // El costo que se muestra es el promedio de hoy: el mismo número que sale en
+  // el inventario, para que las dos pantallas no digan cosas distintas.
+  const costo = await costoDe(id);
 
   const slugCategoria = (producto.categoria as { slug: string } | null)?.slug;
 
@@ -67,6 +72,7 @@ export default async function PaginaEditarProducto({
               ? producto.especificaciones
               : [{ clave: "", valor: "" }],
           precio_usd: Number(producto.precio_usd),
+          costo_usd: costo,
           stock: producto.stock,
           dias_encargo: producto.dias_encargo,
           condicion: producto.condicion,
@@ -83,6 +89,7 @@ export default async function PaginaEditarProducto({
         productoId={id}
         fotos={fotos}
         recargo={recargo}
+        comision={comision}
       />
 
       <section className="mt-12">

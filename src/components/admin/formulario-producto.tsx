@@ -23,6 +23,7 @@ import {
   NOMBRE_RESPALDO,
   RESPALDOS,
 } from "@/lib/producto";
+import { margenDe } from "@/lib/precio";
 import { generarSlug } from "@/lib/texto";
 
 export type OpcionSelect = { id: string; nombre: string };
@@ -36,6 +37,7 @@ export const PRODUCTO_VACIO: DatosProducto = {
   descripcion: null,
   especificaciones: [{ clave: "", valor: "" }],
   precio_usd: 0,
+  costo_usd: null,
   stock: 0,
   dias_encargo: null,
   condicion: "nuevo",
@@ -56,6 +58,7 @@ export function FormularioProducto({
   productoId,
   fotos = [],
   recargo,
+  comision,
 }: {
   accion: (datos: DatosProducto) => Promise<EstadoProducto>;
   valores: DatosProducto;
@@ -67,6 +70,8 @@ export function FormularioProducto({
   fotos?: Foto[];
   /** Porcentaje que se le suma al precio para pagar en bolívares. */
   recargo: number;
+  /** Para poder decir, al escribir el costo, cuánto queda de margen. */
+  comision: number;
 }) {
   const {
     register,
@@ -162,10 +167,10 @@ export function FormularioProducto({
       </Seccion>
 
       <Seccion
-        titulo="Precio"
+        titulo="Precio y costo"
         nota="Se carga el precio pagando en dólares. El de pagar en bolívares se calcula solo sumándole el recargo, y es el que sale grande en la tienda."
       >
-        <div className="sm:w-1/2 sm:pr-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Campo
             etiqueta="Precio en divisas"
             error={errors.precio_usd?.message}
@@ -176,6 +181,20 @@ export function FormularioProducto({
               className={errors.precio_usd ? estiloEntradaMal : estiloEntrada}
             />
             <PrecioEnBolivares control={control} recargo={recargo} />
+          </Campo>
+
+          <Campo
+            etiqueta="Costo de compra (por unidad)"
+            ayuda="Lo que te cuesta a ti. Se guarda sobre las existencias que hay; lo que compres después lo va moviendo solo."
+            error={errors.costo_usd?.message}
+          >
+            <input
+              {...register("costo_usd")}
+              inputMode="decimal"
+              placeholder="Sin cargar"
+              className={errors.costo_usd ? estiloEntradaMal : estiloEntrada}
+            />
+            <MargenDelProducto control={control} comision={comision} />
           </Campo>
         </div>
       </Seccion>
@@ -421,6 +440,50 @@ function PrecioEnBolivares({
         ${enBolivares.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
       </span>{" "}
       (+{recargo} %)
+    </span>
+  );
+}
+
+/**
+ * El margen que deja el costo que se está escribiendo.
+ *
+ * Se dibuja mientras se teclea porque es la pregunta que uno se hace justo ahí:
+ * a este precio y este costo, ¿cuánto queda? Tenerlo que ir a buscar al
+ * inventario después de guardar convierte una decisión en dos pantallas.
+ */
+function MargenDelProducto({
+  control,
+  comision,
+}: {
+  control: Control<DatosProducto>;
+  comision: number;
+}) {
+  const precio = useWatch({ control, name: "precio_usd" });
+  const costo = useWatch({ control, name: "costo_usd" });
+
+  const margen = margenDe(
+    Number(precio) || 0,
+    costo === null || costo === undefined || String(costo).trim() === ""
+      ? null
+      : Number(costo),
+    comision,
+  );
+
+  if (!margen) return null;
+
+  const perdiendo = margen.monto < 0;
+
+  return (
+    <span
+      className={`mt-1 block text-xs ${perdiendo ? "text-error" : "text-texto-meta"}`}
+    >
+      {perdiendo ? "Pierdes " : "Margen "}
+      <span className={perdiendo ? "font-medium" : "text-texto-2 font-medium"}>
+        ${Math.abs(margen.monto).toLocaleString("es-VE", { maximumFractionDigits: 2 })}
+      </span>{" "}
+      ({margen.porcentaje} %)
+      {margen.comision > 0 &&
+        `, ${margen.comision.toLocaleString("es-VE", { maximumFractionDigits: 2 })} de comisión`}
     </span>
   );
 }

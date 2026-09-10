@@ -189,3 +189,22 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
     })),
   };
 }
+
+/**
+ * El costo promedio de un producto, o null si no tiene ninguno cargado.
+ *
+ * Lo lee la ficha del producto para mostrar el mismo número que el inventario:
+ * dos pantallas diciendo costos distintos del mismo producto es la clase de
+ * desacuerdo que hace desconfiar de todos los demás números.
+ */
+export async function costoDe(productoId: string): Promise<number | null> {
+  const supabase = await crearClienteServidor();
+
+  const { data } = await supabase
+    .from("costos_producto")
+    .select("costo_promedio_usd")
+    .eq("producto_id", productoId)
+    .maybeSingle();
+
+  return data ? Number(data.costo_promedio_usd) : null;
+}

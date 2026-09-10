@@ -105,6 +105,16 @@ export const esquemaProducto = yup.object({
     .required("Hace falta el precio.")
     .positive("El precio tiene que ser mayor que cero."),
 
+  // No es columna de `productos`: se guarda como la declaración de costo del
+  // inventario que hay. Se pide aquí porque es donde se busca.
+  costo_usd: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El costo tiene que ser un número.")
+    .nullable()
+    .min(0, "El costo no puede ser negativo.")
+    .defined(),
+
   procedencia: yup
     .string()
     .trim()

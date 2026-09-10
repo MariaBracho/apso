@@ -11,7 +11,7 @@ import { obtenerAjustes } from "@/lib/catalogo";
 export const metadata: Metadata = { title: "Agregar producto" };
 
 export default async function PaginaNuevoProducto() {
-  const [categorias, marcas, { recargo }] = await Promise.all([
+  const [categorias, marcas, { recargo, comision }] = await Promise.all([
     listarCategorias(),
     listarMarcas(),
     obtenerAjustes(),
@@ -30,6 +30,7 @@ export default async function PaginaNuevoProducto() {
         marcas={marcas}
         etiquetaEnvio="Publicar producto"
         recargo={recargo}
+        comision={comision}
       />
     </div>
   );
