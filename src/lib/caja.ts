@@ -1,7 +1,12 @@
 import "server-only";
 
 import { type CategoriaGasto } from "@/lib/gasto";
-import { type MovimientoCaja, saldosPorMetodo } from "@/lib/precio";
+import {
+  type MovimientoCaja,
+  cambioDe,
+  esPagoEnDivisa,
+  saldosPorMetodo,
+} from "@/lib/precio";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -76,6 +81,20 @@ export type Gasto = {
   pedido: { id: string; numero: string } | null;
 };
 
+export type Conversion = {
+  id: string;
+  fecha: string;
+  metodo_origen: string;
+  monto_origen_usd: number;
+  tasa_origen: number;
+  metodo_destino: string;
+  monto_destino_usd: number;
+  /** Lo que se quedó en el camino. */
+  perdida: number;
+  /** La tasa que de verdad se pagó, si el origen eran bolívares. */
+  tasaReal: number | null;
+};
+
 export type ResumenCaja = {
   /** Saldo de cada método: el efectivo y el saldo de Zelle no son lo mismo. */
   porMetodo: Record<string, number>;
@@ -88,7 +107,16 @@ export type ResumenCaja = {
   comisionesPagadas: number;
   /** Lo que salió por comprar mercancía. No es gasto: es inventario. */
   comprado: number;
+  /**
+   * Lo que se quedó en el camino al cambiar bolívares a dólares.
+   *
+   * No es un gasto aparte: ya está descontado del neto por la diferencia entre
+   * las dos puntas del cambio. Se nombra para poder mirarlo, porque si crece
+   * es que el recargo del catálogo se quedó corto.
+   */
+  perdidoEnCambios: number;
   gastos: Gasto[];
+  conversiones: Conversion[];
 };
 
 /**
@@ -102,8 +130,13 @@ export type ResumenCaja = {
 export async function resumenDeCaja(): Promise<ResumenCaja> {
   const supabase = await crearClienteServidor();
 
-  const [{ data: pagos }, { data: gastos }, { data: comisiones }, { data: compras }] =
-    await Promise.all([
+  const [
+    { data: pagos },
+    { data: gastos },
+    { data: comisiones },
+    { data: compras },
+    { data: cambios },
+  ] = await Promise.all([
       supabase
         .from("pagos")
         .select("monto_usd, metodo, tipo")
@@ -132,6 +165,15 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
         .eq("motivo", "entrada")
         .not("metodo", "is", null)
         .not("costo_unitario_usd", "is", null),
+
+      supabase
+        .from("conversiones")
+        .select(
+          `id, fecha, metodo_origen, monto_origen_usd, tasa_origen,
+           metodo_destino, monto_destino_usd`,
+        )
+        .order("fecha", { ascending: false })
+        .limit(50),
     ]);
 
   const compradoPorMetodo = (compras ?? []).map((c) => ({
@@ -149,6 +191,21 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
       signo: (p.tipo === "reembolso" ? -1 : 1) as 1 | -1,
     })),
     ...compradoPorMetodo,
+    // Un cambio mueve plata de un método a otro y algo se queda en el camino.
+    // La diferencia entre las dos puntas es la pérdida, y no hace falta
+    // registrarla aparte: el neto ya la refleja.
+    ...(cambios ?? []).flatMap((c) => [
+      {
+        metodo: c.metodo_origen,
+        montoUsd: Number(c.monto_origen_usd),
+        signo: -1 as const,
+      },
+      {
+        metodo: c.metodo_destino,
+        montoUsd: Number(c.monto_destino_usd),
+        signo: 1 as const,
+      },
+    ]),
     ...(gastos ?? []).map((g) => ({
       metodo: g.metodo,
       montoUsd: Number(g.monto_usd),
@@ -177,6 +234,32 @@ export async function resumenDeCaja(): Promise<ResumenCaja> {
     comprado: dosDecimales(
       compradoPorMetodo.reduce((suma, c) => suma + c.montoUsd, 0),
     ),
+    perdidoEnCambios: dosDecimales(
+      (cambios ?? []).reduce(
+        (suma, c) => suma + Number(c.monto_origen_usd) - Number(c.monto_destino_usd),
+        0,
+      ),
+    ),
+    conversiones: (cambios ?? []).map((c) => {
+      const { perdida, tasaReal } = cambioDe(
+        Number(c.monto_origen_usd),
+        Number(c.tasa_origen),
+        Number(c.monto_destino_usd),
+        !esPagoEnDivisa(c.metodo_origen),
+      );
+
+      return {
+        id: c.id,
+        fecha: c.fecha,
+        metodo_origen: c.metodo_origen,
+        monto_origen_usd: Number(c.monto_origen_usd),
+        tasa_origen: Number(c.tasa_origen),
+        metodo_destino: c.metodo_destino,
+        monto_destino_usd: Number(c.monto_destino_usd),
+        perdida,
+        tasaReal,
+      };
+    }),
     gastos: (gastos ?? []).map((g) => ({
       id: g.id,
       fecha: g.fecha,

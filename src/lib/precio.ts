@@ -232,3 +232,44 @@ export function saldosPorMetodo(movimientos: MovimientoCaja[]): {
     neto: redondear(entro - salio),
   };
 }
+
+export type Cambio = {
+  /** Lo que se perdió al cambiar. Negativo si se ganó. */
+  perdida: number;
+  /**
+   * La tasa a la que se cambió de verdad, en bolívares por dólar. Nula cuando
+   * el cambio no involucra bolívares y la comparación no dice nada.
+   */
+  tasaReal: number | null;
+};
+
+/**
+ * Lo que cuesta cambiar bolívares a dólares.
+ *
+ * La tienda cobra en bolívares a la tasa del BCV y después los cambia para
+ * reponer inventario. Ese cambio no ocurre a la tasa oficial: lo que salió
+ * valorado en 9,52 llega como 7,56, y esos 1,96 son la pérdida.
+ *
+ * `tasaReal` es la que de verdad se pagó — los bolívares que salieron entre
+ * los dólares que llegaron— y es el número que se compara con el del BCV para
+ * saber si el recargo del catálogo alcanza.
+ */
+export function cambioDe(
+  montoOrigenUsd: number,
+  tasaOrigen: number,
+  montoDestinoUsd: number,
+  origenEnBolivares: boolean,
+): Cambio {
+  const perdida = Math.round((montoOrigenUsd - montoDestinoUsd) * 100) / 100;
+
+  if (!origenEnBolivares || montoDestinoUsd <= 0) {
+    return { perdida, tasaReal: null };
+  }
+
+  const bolivares = montoOrigenUsd * tasaOrigen;
+
+  return {
+    perdida,
+    tasaReal: Math.round((bolivares / montoDestinoUsd) * 100) / 100,
+  };
+}

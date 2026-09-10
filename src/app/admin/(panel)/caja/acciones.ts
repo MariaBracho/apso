@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { obtenerTasaVigente } from "@/lib/catalogo";
 import {
+  type DatosConversion,
   type DatosGasto,
   type DatosPago,
+  esquemaConversion,
   esquemaGasto,
   esquemaPago,
   validar,
@@ -125,6 +127,57 @@ export async function registrarGasto(
 
   revalidatePath("/admin/caja");
   return { ok: true };
+}
+
+/**
+ * Registra un cambio de una moneda a otra.
+ *
+ * Los montos llegan en la moneda de cada método y se guardan en dólares: los
+ * bolívares por la tasa del BCV, que es a la que se cobraron. La diferencia
+ * entre las dos puntas es la pérdida y no se guarda aparte — se calcula
+ * restando, y un número derivado que también se almacena es un número que
+ * algún día va a discrepar.
+ */
+export async function registrarConversion(
+  datos: DatosConversion,
+): Promise<EstadoCaja> {
+  const sesion = await exigirAdmin();
+
+  const resultado = await validar(esquemaConversion, datos);
+  if (!resultado.ok) return { error: resultado.error };
+
+  const { fecha, metodo_origen, monto_origen, metodo_destino, monto_destino } =
+    resultado.valores;
+
+  const tasa = await obtenerTasaVigente();
+  if (tasa === null) {
+    return { error: "Carga la tasa del día antes de registrar el cambio." };
+  }
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase.from("conversiones").insert({
+    fecha,
+    metodo_origen,
+    monto_origen_usd: aUsd(monto_origen, metodo_origen, tasa),
+    tasa_origen: tasa,
+    metodo_destino,
+    monto_destino_usd: aUsd(monto_destino, metodo_destino, tasa),
+    registrado_por: sesion.id,
+  });
+
+  if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+  revalidatePath("/admin/caja");
+  return { ok: true };
+}
+
+export async function borrarConversion(conversionId: string) {
+  await exigirAdmin();
+
+  const supabase = await crearClienteServidor();
+  await supabase.from("conversiones").delete().eq("id", conversionId);
+
+  revalidatePath("/admin/caja");
 }
 
 export async function borrarGasto(gastoId: string) {

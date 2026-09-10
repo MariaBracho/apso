@@ -324,6 +324,48 @@ export const esquemaGasto = yup.object({
 
 export type DatosGasto = yup.InferType<typeof esquemaGasto>;
 
+/**
+ * Un cambio de una moneda a otra.
+ *
+ * Los dos montos van en la moneda de su método: se escribe lo que salió y lo
+ * que llegó, tal como se ve en cada aplicación. La pérdida sale de restarlos,
+ * y no se pide, porque pedirla sería hacer la cuenta a mano justo donde el
+ * error no se nota.
+ */
+export const esquemaConversion = yup.object({
+  fecha: yup
+    .string()
+    .required("Pon la fecha del cambio.")
+    .matches(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida."),
+  metodo_origen: yup
+    .string()
+    .oneOf(METODOS_PAGO)
+    .required("Di de dónde salió."),
+  monto_origen: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El monto tiene que ser un número.")
+    .required("Escribe cuánto salió.")
+    .positive("El monto tiene que ser mayor que cero."),
+  metodo_destino: yup
+    .string()
+    .oneOf(METODOS_PAGO)
+    .required("Di a dónde entró.")
+    .test(
+      "distinto",
+      "Cambiar al mismo método no es un cambio.",
+      (valor, ctx) => valor !== ctx.parent.metodo_origen,
+    ),
+  monto_destino: yup
+    .number()
+    .transform(numeroConComa)
+    .typeError("El monto tiene que ser un número.")
+    .required("Escribe cuánto llegó.")
+    .positive("El monto tiene que ser mayor que cero."),
+});
+
+export type DatosConversion = yup.InferType<typeof esquemaConversion>;
+
 // ---------------------------------------------------------------------------
 // Perfil del cliente
 // ---------------------------------------------------------------------------

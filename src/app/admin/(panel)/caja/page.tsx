@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BorrarGasto } from "@/components/admin/borrar-gasto";
+import { BorrarConversion } from "@/components/admin/borrar-conversion";
+import { FormularioCambio } from "@/components/admin/formulario-cambio";
 import { FormularioGasto } from "@/components/admin/formulario-gasto";
 import { type Gasto, resumenDeCaja } from "@/lib/caja";
 import { obtenerTasaVigente } from "@/lib/catalogo";
@@ -66,6 +68,17 @@ export default async function PaginaCaja() {
           {formatearUsd(caja.comprado)} en mercancía ·{" "}
           {formatearUsd(caja.gastado)} en gastos ·{" "}
           {formatearUsd(caja.comisionesPagadas)} en comisiones pagadas
+          {/* La pérdida por cambio no se suma a las otras: ya está descontada
+              del neto por la diferencia entre las dos puntas. Se nombra para
+              poder mirarla, porque si crece es que el recargo se quedó corto. */}
+          {caja.perdidoEnCambios !== 0 && (
+            <>
+              {" · "}
+              <span className="text-ambar">
+                {formatearUsd(caja.perdidoEnCambios)} perdidos al cambiar
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -114,6 +127,59 @@ export default async function PaginaCaja() {
           </ul>
         )}
       </section>
+
+      <section className="border-borde-sutil mt-10 border-t pt-8">
+        <h2 className="etiqueta text-texto-3 mb-1 text-[10px]">
+          Cambiar de una moneda a otra
+        </h2>
+        <p className="text-texto-meta mb-4 max-w-lg text-xs leading-relaxed">
+          Cuando cambias los bolívares que cobraste por dólares. Lo que se
+          queda en el camino no es un gasto: es la diferencia entre lo que
+          valían a tasa BCV y lo que de verdad llegó.
+        </p>
+        <FormularioCambio tasa={tasa} />
+      </section>
+
+      {caja.conversiones.length > 0 && (
+        <section className="mt-8">
+          <ul className="border-borde-sutil divide-y border-t">
+            {caja.conversiones.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-wrap items-baseline justify-between gap-3 py-2.5 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="text-texto-2">
+                    {NOMBRE_PAGO[c.metodo_origen] ?? c.metodo_origen} →{" "}
+                    {NOMBRE_PAGO[c.metodo_destino] ?? c.metodo_destino}
+                  </span>
+                  <span className="text-texto-meta block text-xs">
+                    {formatearFecha(c.fecha)}
+                    {c.tasaReal !== null &&
+                      ` · a Bs ${c.tasaReal.toLocaleString("es-VE", { minimumFractionDigits: 2 })} por dólar`}
+                  </span>
+                </span>
+
+                <span className="flex shrink-0 items-baseline gap-3">
+                  <span className="text-texto-meta text-xs">
+                    {formatearUsd(c.monto_origen_usd)} →{" "}
+                    {formatearUsd(c.monto_destino_usd)}
+                  </span>
+                  <span
+                    className={`font-display font-semibold ${
+                      c.perdida > 0 ? "text-ambar" : "text-exito"
+                    }`}
+                  >
+                    {c.perdida > 0 ? "−" : "+"}
+                    {formatearUsd(Math.abs(c.perdida))}
+                  </span>
+                  <BorrarConversion conversionId={c.id} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="border-borde-sutil mt-10 border-t pt-8">
         <h2 className="etiqueta text-texto-3 mb-4 text-[10px]">

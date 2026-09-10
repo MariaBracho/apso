@@ -277,6 +277,53 @@ export type Database = {
           },
         ]
       }
+      conversiones: {
+        Row: {
+          creado_en: string
+          fecha: string
+          id: string
+          metodo_destino: Database["public"]["Enums"]["metodo_pago"]
+          metodo_origen: Database["public"]["Enums"]["metodo_pago"]
+          monto_destino_usd: number
+          monto_origen_usd: number
+          nota: string | null
+          registrado_por: string | null
+          tasa_origen: number
+        }
+        Insert: {
+          creado_en?: string
+          fecha?: string
+          id?: string
+          metodo_destino: Database["public"]["Enums"]["metodo_pago"]
+          metodo_origen: Database["public"]["Enums"]["metodo_pago"]
+          monto_destino_usd: number
+          monto_origen_usd: number
+          nota?: string | null
+          registrado_por?: string | null
+          tasa_origen: number
+        }
+        Update: {
+          creado_en?: string
+          fecha?: string
+          id?: string
+          metodo_destino?: Database["public"]["Enums"]["metodo_pago"]
+          metodo_origen?: Database["public"]["Enums"]["metodo_pago"]
+          monto_destino_usd?: number
+          monto_origen_usd?: number
+          nota?: string | null
+          registrado_por?: string | null
+          tasa_origen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversiones_registrado_por_fkey"
+            columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favoritos: {
         Row: {
           creado_en: string

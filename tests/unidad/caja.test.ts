@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aUsd, saldosPorMetodo } from "@/lib/precio";
+import { aUsd, cambioDe, saldosPorMetodo } from "@/lib/precio";
 
 describe("aUsd", () => {
   it("un pago en divisas se guarda tal cual", () => {
@@ -110,5 +110,41 @@ describe("la caja siempre cuadra", () => {
     expect(r.porMetodo.efectivo).toBe(49.4);
     expect(r.porMetodo.pago_movil).toBe(85.68);
     expect(r.porMetodo.zelle).toBe(-152);
+  });
+});
+
+describe("cambioDe", () => {
+  /**
+   * El caso real que lo motivó: un hub cobrado en bolívares por el
+   * equivalente a 9,52 a tasa BCV, que al cambiarlo en Binance dejó 7,56.
+   */
+  it("la pérdida es la diferencia entre las dos puntas", () => {
+    const r = cambioDe(9.52, 820.1, 7.56, true);
+
+    expect(r.perdida).toBe(1.96);
+    // Bs 7.807 entre 7,56 dólares: la tasa que se pagó de verdad.
+    expect(r.tasaReal).toBeCloseTo(1032.72, 1);
+  });
+
+  /**
+   * Con esa tasa real, el recargo del catálogo tendría que ser del 26 %: el
+   * 19 % deja la venta en bolívares por debajo del precio en divisas.
+   */
+  it("la tasa real es la que dice si el recargo alcanza", () => {
+    const { tasaReal } = cambioDe(9.52, 820.1, 7.56, true);
+    const brecha = tasaReal! / 820.1 - 1;
+
+    expect(Math.round(brecha * 100)).toBe(26);
+  });
+
+  it("cambiar entre dos monedas fuertes no tiene tasa que comparar", () => {
+    const r = cambioDe(100, 820, 98, false);
+
+    expect(r.perdida).toBe(2);
+    expect(r.tasaReal).toBeNull();
+  });
+
+  it("si el cambio salió a favor, la pérdida es negativa y se ve", () => {
+    expect(cambioDe(100, 820, 105, false).perdida).toBe(-5);
   });
 });

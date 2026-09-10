@@ -1112,3 +1112,55 @@ test.describe("Pedidos sin vendedor", () => {
     }
   });
 });
+
+test.describe("Cambio de divisas", () => {
+  /**
+   * El caso que lo motivó: un hub cobrado en bolívares por el equivalente a
+   * $9,52 a tasa BCV, que al cambiarlo en Binance dejó $7,56. Esos $1,96 no
+   * aparecían en ningún lado — la caja seguía diciendo que había 9,52.
+   */
+  test("mueve la plata de un método a otro y deja ver lo que se pierde", async ({ page }) => {
+    const tasa = await tasaVigente();
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/caja");
+
+    const enBolivares = Math.round(9.52 * tasa);
+    await page.getByLabel("De dónde salió el cambio").selectOption("pago_movil");
+    await page.getByLabel(/Cuánto salió/).fill(String(enBolivares));
+    await page.getByLabel("A dónde entró el cambio").selectOption("binance");
+    await page.getByLabel(/Cuánto llegó/).fill("7.56");
+
+    // La cuenta sale antes de guardar, que es donde sirve.
+    await expect(page.getByText(/Se pierden/)).toBeVisible();
+    await expect(page.getByText(/por dólar, contra/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Registrar cambio" }).click();
+    await expect(page.getByText("Cambio registrado")).toBeVisible();
+
+    try {
+      const { data } = await db
+        .from("conversiones")
+        .select("metodo_origen, monto_origen_usd, metodo_destino, monto_destino_usd")
+        .order("creado_en", { ascending: false })
+        .limit(1)
+        .single();
+
+      expect(data!.metodo_origen).toBe("pago_movil");
+      expect(data!.metodo_destino).toBe("binance");
+      expect(Number(data!.monto_origen_usd)).toBeCloseTo(9.52, 1);
+      expect(Number(data!.monto_destino_usd)).toBeCloseTo(7.56, 2);
+
+      // Los saldos se mueven en las dos puntas, y el neto baja la diferencia.
+      await page.reload();
+      // El primero de cada uno es el de saldos; el otro es la fila del cambio.
+      const pagoMovil = page.getByRole("listitem").filter({ hasText: "Pago Móvil" }).first();
+      const binance = page.getByRole("listitem").filter({ hasText: "Binance" }).first();
+      await expect(pagoMovil).toContainText("$-9,52");
+      await expect(binance).toContainText("$7,56");
+      await expect(page.getByText(/perdidos al cambiar/)).toBeVisible();
+    } finally {
+      await db.from("conversiones").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    }
+  });
+});
