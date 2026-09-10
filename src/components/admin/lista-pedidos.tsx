@@ -74,7 +74,7 @@ export function ListaPedidos({ pedidos }: { pedidos: PedidoFila[] }) {
  * verdad. Del teléfono se quitan los símbolos: nadie escribe el «+58».
  */
 function coincide(pedido: PedidoFila, q: string): boolean {
-  const telefono = pedido.cliente_whatsapp.replace(/\D/g, "");
+  const telefono = (pedido.cliente_whatsapp ?? "").replace(/\D/g, "");
   const qDigitos = q.replace(/\D/g, "");
 
   const campos = [
@@ -119,7 +119,7 @@ function Fila({ pedido }: { pedido: PedidoFila }) {
               {pedido.cliente_nombre}
             </p>
             <p className="text-texto-meta text-xs">
-              {pedido.cliente_whatsapp} ·{" "}
+              {pedido.cliente_whatsapp ?? "Sin número"} ·{" "}
               {NOMBRE_ESTADO[pedido.estado as EstadoPedido] ?? pedido.estado}
               {/* Solo si no vino de la web: lo normal no necesita etiqueta. */}
               {NOMBRE_ORIGEN[pedido.origen] && (

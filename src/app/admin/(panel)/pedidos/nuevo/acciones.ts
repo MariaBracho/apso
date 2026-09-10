@@ -76,7 +76,7 @@ export async function registrarPedidoManual(
     .insert({
       origen: pedido.origen,
       cliente_nombre: pedido.cliente_nombre,
-      cliente_whatsapp: `+58${pedido.whatsapp}`,
+      cliente_whatsapp: pedido.whatsapp ? `+58${pedido.whatsapp}` : null,
       cliente_correo: pedido.cliente_correo,
       entrega: pedido.entrega,
       estado_destino: pedido.estado_destino,

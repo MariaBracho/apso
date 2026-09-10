@@ -22,6 +22,7 @@ import { formatearUsd } from "@/lib/formato";
 import { NOMBRE_PAGO } from "@/lib/pedido";
 import { preciosDe, precioSegunPago } from "@/lib/precio";
 import { ESTADOS, ciudadesDe } from "@/lib/venezuela";
+import { BuscadorClientes } from "@/components/admin/buscador-clientes";
 
 export type ProductoVendible = {
   id: string;
@@ -84,6 +85,7 @@ export function FormularioVenta({
   const estado = useWatch({ control, name: "estado_destino" });
   const metodo = useWatch({ control, name: "metodo_pago" });
   const items = useWatch({ control, name: "items" });
+  const nombre = useWatch({ control, name: "cliente_nombre" });
 
   const ciudades = ciudadesDe(estado ?? "");
 
@@ -92,7 +94,8 @@ export function FormularioVenta({
     precioSegunPago(preciosDe(producto.precio_usd, recargo), metodo);
 
   const total = (items ?? []).reduce(
-    (suma, item) => suma + (Number(item?.precio_usd) || 0) * (Number(item?.cantidad) || 0),
+    (suma, item) =>
+      suma + (Number(item?.precio_usd) || 0) * (Number(item?.cantidad) || 0),
     0,
   );
 
@@ -140,8 +143,11 @@ export function FormularioVenta({
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Entró por" error={errors.origen?.message}>
-            <select aria-label="Entró por"
-              {...register("origen")} className={estiloEntrada}>
+            <select
+              aria-label="Entró por"
+              {...register("origen")}
+              className={estiloEntrada}
+            >
               {ORIGENES_MANUALES.map((o) => (
                 <option key={o} value={o}>
                   {NOMBRE_ORIGEN[o]}
@@ -267,19 +273,34 @@ export function FormularioVenta({
 
       <Seccion
         titulo="Quién compró"
-        nota="El WhatsApp hace falta para la garantía: es por donde se le responde dos años después."
+        nota="Si ya compró antes, búscalo por nombre o correo y se llena solo. El WhatsApp es opcional, pero sin él la garantía depende de que vuelva con su comprobante."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Nombre" error={errors.cliente_nombre?.message}>
-            <input
-              {...register("cliente_nombre")}
-              className={
-                errors.cliente_nombre ? estiloEntradaMal : estiloEntrada
+            <BuscadorClientes
+              valor={nombre ?? ""}
+              invalido={!!errors.cliente_nombre}
+              alEscribir={(v) =>
+                setValue("cliente_nombre", v, { shouldValidate: true })
               }
+              alElegir={(cliente) => {
+                setValue("cliente_nombre", cliente.nombre, {
+                  shouldValidate: true,
+                });
+                setValue("cliente_correo", cliente.correo);
+                // El número guardado va en E.164 y el campo pide diez dígitos.
+                setValue(
+                  "whatsapp",
+                  cliente.whatsapp?.replace(/^\+58/, "") ?? "",
+                );
+              }}
             />
           </Campo>
 
-          <Campo etiqueta="WhatsApp" error={errors.whatsapp?.message}>
+          <Campo
+            etiqueta="WhatsApp (opcional)"
+            error={errors.whatsapp?.message}
+          >
             <div className="flex">
               <span className="border-borde bg-superficie-3 text-texto-2 flex items-center rounded-l-[0.875rem] border border-r-0 px-3.5 text-sm">
                 +58
@@ -316,8 +337,11 @@ export function FormularioVenta({
       <Seccion titulo="Cómo lo recibe">
         <div className="grid gap-4 sm:grid-cols-3">
           <Campo etiqueta="Entrega">
-            <select aria-label="Entrega"
-              {...register("entrega")} className={estiloEntrada}>
+            <select
+              aria-label="Entrega"
+              {...register("entrega")}
+              className={estiloEntrada}
+            >
               <option value="punto_fijo">En Punto Fijo</option>
               <option value="envio_nacional">Envío nacional</option>
             </select>
@@ -328,7 +352,7 @@ export function FormularioVenta({
               <Campo etiqueta="Estado" error={errors.estado_destino?.message}>
                 <select
                   aria-label="Estado de destino"
-              {...register("estado_destino", {
+                  {...register("estado_destino", {
                     onChange: () => setValue("ciudad_destino", null),
                   })}
                   className={
@@ -347,7 +371,7 @@ export function FormularioVenta({
               <Campo etiqueta="Ciudad" error={errors.ciudad_destino?.message}>
                 <select
                   aria-label="Ciudad de destino"
-              {...register("ciudad_destino")}
+                  {...register("ciudad_destino")}
                   disabled={ciudades.length === 0}
                   className={`${errors.ciudad_destino ? estiloEntradaMal : estiloEntrada} disabled:opacity-40`}
                 >

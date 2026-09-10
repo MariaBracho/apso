@@ -519,7 +519,21 @@ export const ORIGENES_MANUALES = ["mostrador", "whatsapp"] as const;
  * es quien sabe si hubo descuento; el formulario lo propone según el método de
  * pago, pero la última palabra es suya.
  */
-export const esquemaPedidoManual = esquemaPedido.concat(
+export const esquemaPedidoManual = esquemaPedido.shape({
+  // En el mostrador puede no haberlo: alguien compra un cable en efectivo y se
+  // va. Exigirlo obligaría a inventar un número, y un número falso en la base
+  // se ve igual que uno verdadero.
+  whatsapp: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .matches(WHATSAPP, {
+      message: "Son 10 dígitos, sin el 0 ni el +58.",
+      excludeEmptyString: true,
+    }),
+}).concat(
   yup.object({
     origen: yup
       .string()
@@ -556,6 +570,87 @@ export const esquemaPedidoManual = esquemaPedido.concat(
 );
 
 export type DatosPedidoManual = yup.InferType<typeof esquemaPedidoManual>;
+
+/**
+ * Los datos de un pedido que sí se pueden corregir después.
+ *
+ * Están los del cliente y los de la entrega: un nombre mal escrito o una
+ * ciudad equivocada son errores de captura y arreglarlos no mueve dinero.
+ *
+ * No están las líneas ni los precios. Esos quedaron congelados al venderse y
+ * de ellos cuelgan el total, el inventario descontado y una comisión que puede
+ * estar pagada; cambiarlos por detrás dejaría tres cosas diciendo cifras
+ * distintas de la misma venta. Para eso está cancelar y volver a registrar.
+ */
+export const esquemaPedidoEditado = yup.object({
+  cliente_nombre: yup
+    .string()
+    .trim()
+    .required("Escribe el nombre.")
+    .min(2, "Escribe el nombre completo."),
+  whatsapp: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .matches(WHATSAPP, {
+      message: "Son 10 dígitos, sin el 0 ni el +58.",
+      excludeEmptyString: true,
+    }),
+  cliente_correo: yup
+    .string()
+    .trim()
+    .email("Ese correo no parece válido.")
+    .nullable()
+    .transform(vacioANulo)
+    .defined(),
+  metodo_pago: yup.string().oneOf(METODOS_PAGO).required("Elige cómo pagó."),
+  entrega: yup
+    .string()
+    .oneOf(["punto_fijo", "envio_nacional"] as const)
+    .required(),
+  estado_destino: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .when("entrega", {
+      is: "envio_nacional",
+      then: (esquema) =>
+        esquema
+          .required("Elige el estado.")
+          .oneOf(
+            ESTADOS.map((e) => e.nombre),
+            "Ese estado no está en la lista.",
+          ),
+    }),
+  ciudad_destino: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .when("entrega", {
+      is: "envio_nacional",
+      then: (esquema) =>
+        esquema.required("Elige la ciudad.").test(
+          "ciudad-del-estado",
+          "Esa ciudad no es de ese estado.",
+          (ciudad, ctx) =>
+            !ciudad || esDestinoValido(ctx.parent.estado_destino ?? "", ciudad),
+        ),
+    }),
+  para_que_lo_usa: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined(),
+});
+
+export type DatosPedidoEditado = yup.InferType<typeof esquemaPedidoEditado>;
 
 /**
  * Valida en el servidor y devuelve el primer error legible.

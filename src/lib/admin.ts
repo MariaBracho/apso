@@ -77,7 +77,7 @@ export type PedidoFila = {
   id: string;
   numero: string;
   cliente_nombre: string;
-  cliente_whatsapp: string;
+  cliente_whatsapp: string | null;
   estado: string;
   origen: string;
   para_que_lo_usa: string | null;
@@ -166,7 +166,7 @@ export type PedidoDetalle = {
   id: string;
   numero: string;
   cliente_nombre: string;
-  cliente_whatsapp: string;
+  cliente_whatsapp: string | null;
   cliente_correo: string | null;
   estado: string;
   origen: string;
@@ -367,6 +367,44 @@ export async function listarVendedores(): Promise<Vendedor[]> {
     .select("id, nombre")
     .contains("roles", ["vendedor"])
     .order("nombre");
+
+  return data ?? [];
+}
+
+export type ClienteConocido = {
+  id: string;
+  nombre: string;
+  correo: string;
+  whatsapp: string | null;
+};
+
+/**
+ * Busca entre quienes ya compraron o tienen cuenta.
+ *
+ * Al registrar una venta de mostrador se escribía el nombre a mano cada vez,
+ * así que el mismo cliente terminaba como «Maria Bracho», «maria» y «Maria B»
+ * — tres personas distintas para la base, y ninguna con su historial completo.
+ *
+ * Busca por nombre y por correo porque son las dos formas en que uno se acuerda
+ * de alguien. El WhatsApp no: para eso está el buscador de pedidos, y aquí lo
+ * que se quiere es encontrar a la persona, no su pedido.
+ */
+export async function buscarClientes(
+  termino: string,
+): Promise<ClienteConocido[]> {
+  const q = termino.trim();
+  // Con una letra coincide medio mundo y la lista no ayuda a elegir.
+  if (q.length < 2) return [];
+
+  const supabase = await crearClienteServidor();
+  const patron = `%${q}%`;
+
+  const { data } = await supabase
+    .from("perfiles")
+    .select("id, nombre, correo, whatsapp")
+    .or(`nombre.ilike.${patron},correo.ilike.${patron}`)
+    .order("nombre")
+    .limit(8);
 
   return data ?? [];
 }

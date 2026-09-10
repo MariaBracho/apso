@@ -7,11 +7,7 @@ import { ControlEstado } from "@/components/admin/control-estado";
 import { BloquePagos } from "@/components/admin/bloque-pagos";
 import { SelectorVendedor } from "@/components/admin/selector-vendedor";
 import { FotoProducto } from "@/components/tienda/foto-producto";
-import {
-  type Vendedor,
-  listarVendedores,
-  obtenerPedido,
-} from "@/lib/admin";
+import { type Vendedor, listarVendedores, obtenerPedido } from "@/lib/admin";
 import { pagosDePedido } from "@/lib/caja";
 import { obtenerTasaVigente } from "@/lib/catalogo";
 import { fotoPrincipal, rutaProducto } from "@/lib/producto";
@@ -55,22 +51,25 @@ export default async function PaginaPedido({
             {pedido.numero}
           </h1>
           <p className="text-texto-2 mt-1 text-sm">
-            {pedido.cliente_nombre} · recibido {formatearFecha(pedido.creado_en)}{" "}
-            · tasa Bs {tasa.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
+            {pedido.cliente_nombre} · recibido{" "}
+            {formatearFecha(pedido.creado_en)} · tasa Bs{" "}
+            {tasa.toLocaleString("es-VE", { minimumFractionDigits: 2 })}
           </p>
         </div>
 
-        <a
-          href={enlaceWhatsapp(
-            `Hola ${pedido.cliente_nombre}, te escribo por tu pedido ${pedido.numero}.`,
-            pedido.cliente_whatsapp,
-          )}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora shrink-0 border px-4 py-2 text-sm font-semibold transition-colors"
-        >
-          Escribir al cliente
-        </a>
+        {pedido.cliente_whatsapp && (
+          <a
+            href={enlaceWhatsapp(
+              `Hola ${pedido.cliente_nombre}, te escribo por tu pedido ${pedido.numero}.`,
+              pedido.cliente_whatsapp,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-cian text-cian hover:bg-cian hover:text-superficie rounded-pildora shrink-0 border px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            Escribir al cliente
+          </a>
+        )}
       </header>
 
       {esCancelado(estado) && pedido.motivo_cancelacion && (
@@ -216,7 +215,10 @@ function Cliente({
       <h2 className="etiqueta text-texto-3 mb-3 text-[10px]">Cliente</h2>
       <dl className="space-y-2 text-sm">
         <Dato termino="Nombre" valor={pedido.cliente_nombre} />
-        <Dato termino="WhatsApp" valor={pedido.cliente_whatsapp} />
+        <Dato
+          termino="WhatsApp"
+          valor={pedido.cliente_whatsapp ?? "Sin número"}
+        />
         {pedido.cliente_correo && (
           <Dato termino="Correo" valor={pedido.cliente_correo} />
         )}

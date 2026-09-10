@@ -1164,3 +1164,80 @@ test.describe("Cambio de divisas", () => {
     }
   });
 });
+
+test.describe("Quién compró, en una venta de mostrador", () => {
+  /**
+   * El nombre se escribía a mano cada vez, así que el mismo cliente terminaba
+   * como tres personas distintas para la base y ninguna con su historial
+   * completo.
+   */
+  test("busca un cliente que ya existe y rellena sus datos", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+    const { data: cliente } = await db
+      .from("perfiles").select("nombre, correo, whatsapp")
+      .eq("correo", "admin@apso.com.ve").single();
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+
+    // Se busca por correo, que es la otra forma de acordarse de alguien.
+    await page.getByLabel("Nombre del cliente").fill("admin@apso");
+    await page.getByRole("button", { name: new RegExp(cliente!.nombre, "i") }).click();
+
+    await expect(page.getByLabel("Nombre del cliente")).toHaveValue(cliente!.nombre);
+    await expect(page.getByLabel(/Correo/)).toHaveValue(cliente!.correo);
+    await expect(page.getByRole("textbox", { name: /WhatsApp/ })).toHaveValue(
+      cliente!.whatsapp!.replace("+58", ""),
+    );
+
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    try {
+      const { data } = await db
+        .from("pedidos").select("cliente_nombre, cliente_correo").eq("numero", numero).single();
+      expect(data!.cliente_nombre).toBe(cliente!.nombre);
+      expect(data!.cliente_correo).toBe(cliente!.correo);
+    } finally {
+      const { data: p } = await db.from("pedidos").select("id").eq("numero", numero).single();
+      await db.from("comisiones").delete().eq("pedido_id", p!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  /**
+   * Alguien compra un cable en efectivo y se va. Exigir el número obligaría a
+   * inventarlo, y un número falso en la base se ve igual que uno verdadero.
+   */
+  test("se registra sin WhatsApp, y el panel no ofrece escribirle", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre del cliente").fill("Cliente de paso");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+
+    try {
+      const { data } = await db
+        .from("pedidos").select("id, cliente_whatsapp").eq("numero", numero).single();
+      expect(data!.cliente_whatsapp).toBeNull();
+
+      await expect(page.getByText("Sin número")).toBeVisible();
+      // Sin número no hay a quién escribirle: el botón no está.
+      await expect(page.getByRole("link", { name: /escribir al cliente/i })).toHaveCount(0);
+    } finally {
+      const { data: p } = await db.from("pedidos").select("id").eq("numero", numero).single();
+      await db.from("comisiones").delete().eq("pedido_id", p!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});
