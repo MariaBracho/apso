@@ -217,7 +217,7 @@ test.describe("Ventas fuera de la web", () => {
     await page.getByLabel("Agregar producto").selectOption(otro.id);
     await expect(page.getByRole("button", { name: /^quitar/i })).toHaveCount(2);
 
-    await page.getByLabel("Nombre", { exact: true }).fill("Zoraida Perdomo");
+    await page.getByLabel("Nombre del cliente").fill("Zoraida Perdomo");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4145558899");
 
     // Viene marcado: la venta de mostrador ya ocurrió.
@@ -281,7 +281,7 @@ test.describe("Ventas fuera de la web", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
 
-    await page.getByLabel("Nombre", { exact: true }).fill("Nadie");
+    await page.getByLabel("Nombre del cliente").fill("Nadie");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
 
@@ -404,7 +404,7 @@ test.describe("Comisiones", () => {
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Cómo pagó").selectOption("efectivo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByLabel("Nombre del cliente").fill("Cliente de prueba");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -469,7 +469,7 @@ test.describe("Comisiones", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByLabel("Nombre del cliente").fill("Cliente de prueba");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -535,7 +535,7 @@ test.describe("Quién atiende el pedido", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByLabel("Nombre del cliente").fill("Cliente de prueba");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -610,7 +610,7 @@ test.describe("Mis ventas y comisiones", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Zoraida Perdomo");
+    await page.getByLabel("Nombre del cliente").fill("Zoraida Perdomo");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4145558899");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -748,7 +748,7 @@ test.describe("Caja", () => {
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Cómo pagó").selectOption("pago_movil");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByLabel("Nombre del cliente").fill("Cliente de prueba");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -891,7 +891,7 @@ test.describe("La caja cuadra", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente devuelto");
+    await page.getByLabel("Nombre del cliente").fill("Cliente devuelto");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -1019,7 +1019,7 @@ test.describe("Pedidos sin vendedor", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Venta del sitio");
+    await page.getByLabel("Nombre del cliente").fill("Venta del sitio");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     await page.getByRole("button", { name: "Registrar la venta" }).click();
     await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
@@ -1070,7 +1070,7 @@ test.describe("Pedidos sin vendedor", () => {
     await entrarComoAdmin(page);
     await page.goto("/admin/pedidos/nuevo");
     await page.getByLabel("Agregar producto").selectOption(producto.id);
-    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByLabel("Nombre del cliente").fill("Cliente de prueba");
     await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
     // Sin marcar como entregado: se mueve el estado después, a mano.
     await page.getByRole("checkbox", { name: /ya está pagado y entregado/i }).uncheck();
