@@ -25,14 +25,25 @@ export function SelectorVendedor({
 }) {
   const [pendiente, iniciar] = useTransition();
 
-  const cambiar = (perfilId: string) => {
-    if (!perfilId || perfilId === actual) return;
+  const cambiar = (valor: string) => {
+    // Vacío es «nadie», que es una respuesta y no la ausencia de una.
+    const perfilId = valor === "" ? null : valor;
+    if (perfilId === actual) return;
 
     iniciar(async () => {
       const resultado = await cambiarVendedor(pedidoId, perfilId);
 
       if ("error" in resultado) {
         toast.error(resultado.error);
+        return;
+      }
+
+      if (perfilId === null) {
+        toast.success("Este pedido queda sin vendedor", {
+          description: resultado.comisionMovida
+            ? "No paga comisión: la venta la hizo el sitio."
+            : "La comisión ya estaba pagada, así que se queda con quien la cobró.",
+        });
         return;
       }
 
@@ -61,7 +72,10 @@ export function SelectorVendedor({
             aria-label="Quién atiende este pedido"
             className="bg-superficie-2 border-borde text-texto-2 focus:border-cian rounded border px-2 py-1 text-sm outline-none disabled:opacity-50"
           >
-            {actual === null && <option value="">Sin asignar</option>}
+            {/* Siempre, no solo cuando está vacío: hay ventas que hizo el
+                sitio y atribuírselas a quien las despachó le pagaría comisión
+                por un trabajo que no hizo. */}
+            <option value="">Nadie</option>
             {vendedores.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.nombre}
@@ -73,10 +87,16 @@ export function SelectorVendedor({
 
       {/* Con una sola opción el desplegable no explica por qué: se dice dónde
           salen los demás nombres. */}
-      {vendedores.length < 2 && (
+      {actual === null ? (
         <p className="text-texto-meta text-right text-xs">
-          Para que aparezca otra persona, dale el rol de vendedor.
+          Sin vendedor: este pedido no paga comisión.
         </p>
+      ) : (
+        vendedores.length < 2 && (
+          <p className="text-texto-meta text-right text-xs">
+            Para que aparezca otra persona, dale el rol de vendedor.
+          </p>
+        )
       )}
     </div>
   );

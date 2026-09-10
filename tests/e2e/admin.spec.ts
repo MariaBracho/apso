@@ -1003,3 +1003,112 @@ test.describe("Costo desde la ficha del producto", () => {
     }
   });
 });
+
+test.describe("Pedidos sin vendedor", () => {
+  /**
+   * «Nadie» es una respuesta y no la ausencia de una: hay ventas que hizo el
+   * sitio sin que nadie vendiera nada, y atribuírselas a quien las despachó le
+   * pagaría comisión por un trabajo que no hizo.
+   */
+  test("dejar un pedido sin vendedor le quita la comisión", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await db.rpc("declarar_costo_inicial", { p_producto: producto.id, p_costo: 60 });
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Venta del sitio");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+    const { data: pedido } = await db.from("pedidos").select("id").eq("numero", numero).single();
+
+    try {
+      // Nace con comisión, porque lo registró alguien.
+      const { data: nacida } = await db
+        .from("comisiones").select("id").eq("pedido_id", pedido!.id).maybeSingle();
+      expect(nacida).not.toBeNull();
+
+      await page.getByLabel("Quién atiende este pedido").selectOption("");
+      await expect(page.getByText("Este pedido queda sin vendedor")).toBeVisible();
+      await expect(page.getByText("No paga comisión: la venta la hizo el sitio.")).toBeVisible();
+
+      const { data: pedidoSinVendedor } = await db
+        .from("pedidos").select("atendido_por").eq("id", pedido!.id).single();
+      expect(pedidoSinVendedor!.atendido_por).toBeNull();
+
+      const { data: comision } = await db
+        .from("comisiones").select("id").eq("pedido_id", pedido!.id).maybeSingle();
+      expect(comision).toBeNull();
+
+      await page.reload();
+      await expect(page.getByText("Sin vendedor: este pedido no paga comisión.")).toBeVisible();
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("movimientos_inventario").delete().eq("producto_id", producto.id);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+
+  /**
+   * Quien lo toca primero lo reclama, y después no se lo quita nadie. Antes se
+   * reescribía en cada cambio de estado: quien marcaba «entregado» un pedido
+   * que vendió otro se llevaba la atribución, y con ella la comisión.
+   */
+  test("mover el estado no le roba el pedido a quien lo vendió", async ({ page }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    const { data: otro } = await db
+      .from("perfiles").select("id, roles").neq("correo", "admin@apso.com.ve").limit(1).single();
+    await db.from("perfiles").update({ roles: ["cliente", "vendedor"] }).eq("id", otro!.id);
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre", { exact: true }).fill("Cliente de prueba");
+    await page.getByRole("textbox", { name: /WhatsApp/ }).fill("4141112233");
+    // Sin marcar como entregado: se mueve el estado después, a mano.
+    await page.getByRole("checkbox", { name: /ya está pagado y entregado/i }).uncheck();
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+    const numero = (await page.getByRole("heading", { level: 1 }).textContent())!.match(/A-\d+/)![0];
+    const { data: pedido } = await db.from("pedidos").select("id").eq("numero", numero).single();
+
+    try {
+      // Se le pasa al otro vendedor. Se espera a que el selector muestre el
+      // valor nuevo: es la señal de que el servidor respondió y la página se
+      // volvió a pintar. Clicar antes cae sobre un render a medias.
+      const selector = page.getByLabel("Quién atiende este pedido");
+      await selector.selectOption(otro!.id);
+      // El aviso también queda en el historial del pedido, así que se busca en
+      // la región de notificaciones y no en toda la página.
+      await expect(
+        page.getByRole("region", { name: /notification/i }).getByText(/Pasa a atenderlo/),
+      ).toBeVisible();
+      await expect(selector).toHaveValue(otro!.id);
+
+      // Y el admin lo marca como pagado: el pedido sigue siendo del otro.
+      await page.getByRole("button", { name: "Confirmado y pagado" }).click();
+      await expect(page.getByText(/Pedido en «Confirmado y pagado»/)).toBeVisible();
+
+      const { data: despues } = await db
+        .from("pedidos").select("atendido_por").eq("id", pedido!.id).single();
+      expect(despues!.atendido_por).toBe(otro!.id);
+
+      // Y la comisión nació a nombre suyo, no de quien movió el estado.
+      const { data: comision } = await db
+        .from("comisiones").select("perfil_id").eq("pedido_id", pedido!.id).single();
+      expect(comision!.perfil_id).toBe(otro!.id);
+    } finally {
+      await db.from("comisiones").delete().eq("pedido_id", pedido!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+      await db.from("perfiles").update({ roles: otro!.roles }).eq("id", otro!.id);
+    }
+  });
+});

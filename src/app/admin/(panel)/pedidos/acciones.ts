@@ -58,12 +58,17 @@ export async function cambiarEstado(
 
   const supabase = await crearClienteServidor();
 
-  const { data: pedido } = await supabase
+  const { data: pedido, error: alLeer } = await supabase
     .from("pedidos")
-    .select("id, estado, es_encargo, inventario_descontado, confirmado_en")
+    .select(
+      "id, estado, es_encargo, inventario_descontado, confirmado_en, atendido_por",
+    )
     .eq("id", pedidoId)
     .maybeSingle();
 
+  // Se distingue «no está» de «no se pudo leer». Tratar un fallo de consulta
+  // como un pedido inexistente manda a buscar en el sitio equivocado.
+  if (alLeer) return { error: `No se pudo leer el pedido: ${alLeer.message}` };
   if (!pedido) return { error: "No encontramos ese pedido." };
   if (pedido.estado === nuevoEstado) return { ok: true };
 
@@ -83,8 +88,12 @@ export async function cambiarEstado(
   const cambios: Record<string, unknown> = {
     estado: nuevoEstado,
     inventario_descontado: debeDescontar,
-    atendido_por: sesion.id,
   };
+
+  // Lo reclama quien lo toca primero, y después no se lo quita nadie. Antes se
+  // reescribía en cada cambio de estado: quien marcaba «entregado» un pedido
+  // que vendió otro se llevaba la atribución, y con ella la comisión.
+  if (pedido.atendido_por === null) cambios.atendido_por = sesion.id;
 
   // Se marca al pasar el corte del pago, no solo en ese estado exacto: una
   // venta de mostrador entra directo en «entregado» y se quedaba sin fecha de
@@ -120,8 +129,11 @@ export async function cambiarEstado(
   // esta misma sesión — por eso se toma de aquí y no de lo que hubiera antes.
   if (debeDescontar !== pedido.inventario_descontado) {
     if (debeDescontar) {
+      // A quien atiende el pedido, que puede no ser quien mueve el estado.
+      const vendedor = pedido.atendido_por ?? sesion.id;
       const { comision } = await obtenerAjustes();
-      await generarComision(pedidoId, sesion.id, comision);
+      const fallo = await generarComision(pedidoId, vendedor, comision);
+      if (fallo) return { error: `No se pudo registrar la comisión: ${fallo}` };
     } else {
       await quitarComision(pedidoId);
     }
@@ -326,12 +338,16 @@ export async function agregarExistencias(
 }
 
 /**
- * Cambia a quién se le atribuye el pedido.
+ * Cambia a quién se le atribuye el pedido, o lo deja sin nadie.
  *
  * `atendido_por` se pone solo con quien mueve el estado, que casi siempre es
  * quien vendió — pero no siempre: alguien vende y otro despacha, o se registra
  * a mano una venta que hizo otra persona. Sin poder corregirlo, la comisión se
  * le paga al equivocado.
+ *
+ * «Nadie» es una respuesta válida: hay ventas que hizo el sitio sin que nadie
+ * vendiera nada, y atribuírselas a quien las despachó le pagaría comisión por
+ * un trabajo que no hizo.
  *
  * La comisión se mueve con el pedido solo si no se ha pagado. Una ya liquidada
  * se queda con quien la cobró: ese dinero salió, y moverla de dueño haría que
@@ -339,22 +355,27 @@ export async function agregarExistencias(
  */
 export async function cambiarVendedor(
   pedidoId: string,
-  perfilId: string,
+  perfilId: string | null,
 ): Promise<{ error: string } | { ok: true; comisionMovida: boolean }> {
-  await exigirAdmin();
+  const sesion = await exigirAdmin();
 
   const supabase = await crearClienteServidor();
 
-  // Que tenga el rol se comprueba aquí y no solo en el selector: la acción se
-  // puede llamar sin pasar por la pantalla.
-  const { data: vendedor } = await supabase
-    .from("perfiles")
-    .select("id, nombre, roles")
-    .eq("id", perfilId)
-    .maybeSingle();
+  let nombre = "nadie";
 
-  if (!vendedor || !vendedor.roles.includes("vendedor")) {
-    return { error: "Esa persona no tiene el rol de vendedor." };
+  if (perfilId !== null) {
+    // Que tenga el rol se comprueba aquí y no solo en el selector: la acción
+    // se puede llamar sin pasar por la pantalla.
+    const { data: vendedor } = await supabase
+      .from("perfiles")
+      .select("id, nombre, roles")
+      .eq("id", perfilId)
+      .maybeSingle();
+
+    if (!vendedor || !vendedor.roles.includes("vendedor")) {
+      return { error: "Esa persona no tiene el rol de vendedor." };
+    }
+    nombre = vendedor.nombre;
   }
 
   const { error } = await supabase
@@ -364,12 +385,22 @@ export async function cambiarVendedor(
 
   if (error) return { error: `No se pudo guardar: ${error.message}` };
 
-  const { data: movidas } = await supabase
-    .from("comisiones")
-    .update({ perfil_id: perfilId })
-    .eq("pedido_id", pedidoId)
-    .is("pagada_en", null)
-    .select("id");
+  // Sin nadie atendiéndolo no hay comisión que pagar: esa venta la hizo el
+  // sitio. Se borra la pendiente; la ya pagada se queda, porque ese dinero
+  // salió y borrarla descuadraría la liquidación de ese mes.
+  const { data: movidas } = perfilId
+    ? await supabase
+        .from("comisiones")
+        .update({ perfil_id: perfilId })
+        .eq("pedido_id", pedidoId)
+        .is("pagada_en", null)
+        .select("id")
+    : await supabase
+        .from("comisiones")
+        .delete()
+        .eq("pedido_id", pedidoId)
+        .is("pagada_en", null)
+        .select("id");
 
   const { data: pendiente } = await supabase
     .from("comisiones")
@@ -379,8 +410,11 @@ export async function cambiarVendedor(
 
   await supabase.from("pedido_eventos").insert({
     pedido_id: pedidoId,
-    descripcion: `Pasa a atenderlo ${vendedor.nombre}`,
-    autor_id: (await exigirAdmin()).id,
+    descripcion:
+      perfilId === null
+        ? "Deja de tener vendedor asignado"
+        : `Pasa a atenderlo ${nombre}`,
+    autor_id: sesion.id,
   });
 
   revalidatePath(`/admin/pedidos/${pedidoId}`);

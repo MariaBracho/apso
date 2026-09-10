@@ -18,12 +18,14 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
  * Se llama al cruzar el corte del pago. La restricción de un pedido por fila
  * es lo que impide duplicarla si el pedido va y vuelve entre estados, así que
  * un choque ahí no es un error: es que ya estaba.
+ *
+ * Devuelve el mensaje si algo más falla, o null si salió bien.
  */
 export async function generarComision(
   pedidoId: string,
   perfilId: string,
   porcentaje: number,
-): Promise<void> {
+): Promise<string | null> {
   const supabase = await crearClienteServidor();
 
   const { data: items } = await supabase
@@ -31,7 +33,7 @@ export async function generarComision(
     .select("producto_id, cantidad, precio_usd_unitario")
     .eq("pedido_id", pedidoId);
 
-  if (!items || items.length === 0) return;
+  if (!items || items.length === 0) return "El pedido no tiene líneas.";
 
   const ids = items.map((i) => i.producto_id).filter((id): id is string => !!id);
   const { data: costos } = await supabase
@@ -54,7 +56,9 @@ export async function generarComision(
     porcentaje,
   );
 
-  await supabase.from("comisiones").insert({
+  // Se mira el error. Una comisión que no se guarda en silencio es una deuda
+  // con alguien que nadie va a descubrir hasta que reclame.
+  const { error } = await supabase.from("comisiones").insert({
     pedido_id: pedidoId,
     perfil_id: perfilId,
     margen_usd: calculada.margen,
@@ -62,6 +66,11 @@ export async function generarComision(
     monto_usd: calculada.monto,
     items_sin_costo: calculada.itemsSinCosto,
   });
+
+  // Chocar con la restricción de un pedido por fila no es un error: es que la
+  // comisión ya estaba, y eso es justo lo que la restricción protege.
+  if (error && error.code !== "23505") return error.message;
+  return null;
 }
 
 /**
