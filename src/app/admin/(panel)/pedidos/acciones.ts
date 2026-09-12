@@ -10,7 +10,12 @@ import {
 } from "@/lib/estados";
 import { obtenerAjustes } from "@/lib/catalogo";
 import { generarComision, quitarComision } from "@/lib/comisiones";
-import { esquemaSerial, validar } from "@/lib/esquemas";
+import {
+  type DatosPedidoEditado,
+  esquemaPedidoEditado,
+  esquemaSerial,
+  validar,
+} from "@/lib/esquemas";
 import { exigirAdmin } from "@/lib/sesion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -460,4 +465,110 @@ export async function declararCostoInicial(
 
   revalidatePath("/admin/productos");
   return { ok: true };
+}
+
+/** Cómo se nombra cada campo en el historial. */
+const ETIQUETA_CAMPO = {
+  cliente_nombre: "el nombre",
+  cliente_whatsapp: "el WhatsApp",
+  cliente_correo: "el correo",
+  entrega: "la entrega",
+  estado_destino: "el estado de destino",
+  ciudad_destino: "la ciudad de destino",
+  metodo_pago: "el método de pago",
+  para_que_lo_usa: "lo que dijo el cliente",
+} as const;
+
+type CampoEditable = keyof typeof ETIQUETA_CAMPO;
+
+/**
+ * Corrige los datos de captura de un pedido.
+ *
+ * Se equivoca uno tecleando, y hasta ahora un nombre mal escrito o una ciudad
+ * equivocada se quedaban ahí para siempre: la única salida era cancelar una
+ * venta que sí ocurrió. Estos datos no mueven dinero, así que arreglarlos no
+ * descuadra nada.
+ *
+ * No se tocan las líneas ni los precios. De ellos cuelgan el total, el
+ * inventario ya descontado y una comisión que puede estar pagada; cambiarlos
+ * por detrás dejaría tres cosas diciendo cifras distintas de la misma venta.
+ * Para eso está cancelar y volver a registrar.
+ *
+ * Queda en el historial qué se corrigió. Un dato que cambia sin dejar rastro
+ * es justo el que después nadie puede explicar.
+ */
+export async function editarPedido(
+  pedidoId: string,
+  datos: DatosPedidoEditado,
+): Promise<EstadoAccion> {
+  const sesion = await exigirAdmin();
+
+  const resultado = await validar(esquemaPedidoEditado, datos);
+  if (!resultado.ok) return { error: resultado.error };
+
+  const valores = resultado.valores;
+  const supabase = await crearClienteServidor();
+
+  const { data: antes, error: alLeer } = await supabase
+    .from("pedidos")
+    .select(
+      `cliente_nombre, cliente_whatsapp, cliente_correo, entrega,
+       estado_destino, ciudad_destino, metodo_pago, para_que_lo_usa`,
+    )
+    .eq("id", pedidoId)
+    .maybeSingle();
+
+  if (alLeer) return { error: `No se pudo leer el pedido: ${alLeer.message}` };
+  if (!antes) return { error: "No encontramos ese pedido." };
+
+  const despues: Record<CampoEditable, string | null> = {
+    cliente_nombre: valores.cliente_nombre,
+    // El número se guarda en E.164 y el campo pide los diez dígitos.
+    cliente_whatsapp: valores.whatsapp ? `+58${valores.whatsapp}` : null,
+    cliente_correo: valores.cliente_correo,
+    entrega: valores.entrega,
+    // Un envío que pasa a retirarse en Punto Fijo suelta su destino: dejarlo
+    // ahí haría que la etiqueta de despacho siguiera diciendo Maracaibo.
+    estado_destino:
+      valores.entrega === "envio_nacional" ? valores.estado_destino : null,
+    ciudad_destino:
+      valores.entrega === "envio_nacional" ? valores.ciudad_destino : null,
+    metodo_pago: valores.metodo_pago,
+    para_que_lo_usa: valores.para_que_lo_usa,
+  };
+
+  const previo = antes as Record<CampoEditable, string | null>;
+  const cambiados = (Object.keys(despues) as CampoEditable[]).filter(
+    (campo) => previo[campo] !== despues[campo],
+  );
+
+  // Abrir el formulario y guardarlo sin tocar nada no es un cambio, y anotarlo
+  // llenaría el historial de entradas que no dicen nada.
+  if (cambiados.length === 0) return { ok: true };
+
+  const { error } = await supabase
+    .from("pedidos")
+    .update(despues)
+    .eq("id", pedidoId);
+
+  if (error) return { error: `No se pudo guardar: ${error.message}` };
+
+  const lista = cambiados.map((campo) => ETIQUETA_CAMPO[campo]);
+
+  await supabase.from("pedido_eventos").insert({
+    pedido_id: pedidoId,
+    descripcion: `${lista.length === 1 ? "Se corrigió" : "Se corrigieron"} ${enumerar(lista)}`,
+    autor_id: sesion.id,
+  });
+
+  revalidatePath("/admin/pedidos");
+  revalidatePath(`/admin/pedidos/${pedidoId}`);
+  revalidatePath("/mis-pedidos");
+  return { ok: true };
+}
+
+/** «el nombre, el correo y la entrega», como lo diría una persona. */
+function enumerar(partes: string[]): string {
+  if (partes.length <= 1) return partes.join("");
+  return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
 }

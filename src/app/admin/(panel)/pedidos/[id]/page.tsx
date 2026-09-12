@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { BloqueSeriales } from "@/components/admin/bloque-seriales";
 import { ControlEstado } from "@/components/admin/control-estado";
 import { BloquePagos } from "@/components/admin/bloque-pagos";
+import { EditorPedido } from "@/components/admin/editor-pedido";
 import { SelectorVendedor } from "@/components/admin/selector-vendedor";
 import { FotoProducto } from "@/components/tienda/foto-producto";
 import { type Vendedor, listarVendedores, obtenerPedido } from "@/lib/admin";
@@ -14,7 +15,7 @@ import { fotoPrincipal, rutaProducto } from "@/lib/producto";
 import { type EstadoPedido, NOMBRE_ESTADO, esCancelado } from "@/lib/estados";
 import { enlaceWhatsapp } from "@/lib/contacto";
 import { formatearBs, formatearUsd } from "@/lib/formato";
-import { NOMBRE_ORIGEN, NOMBRE_PAGO, destinoDe } from "@/lib/pedido";
+import { NOMBRE_ORIGEN } from "@/lib/pedido";
 
 export const metadata: Metadata = { title: "Detalle del pedido" };
 
@@ -213,25 +214,18 @@ function Cliente({
   return (
     <section>
       <h2 className="etiqueta text-texto-3 mb-3 text-[10px]">Cliente</h2>
-      <dl className="space-y-2 text-sm">
-        <Dato termino="Nombre" valor={pedido.cliente_nombre} />
-        <Dato
-          termino="WhatsApp"
-          valor={pedido.cliente_whatsapp ?? "Sin número"}
-        />
-        {pedido.cliente_correo && (
-          <Dato termino="Correo" valor={pedido.cliente_correo} />
-        )}
-        <Dato termino="Entrega" valor={destinoDe(pedido)} />
+
+      {/* Los datos de captura se corrigen aquí mismo: un nombre mal escrito o
+          una ciudad equivocada no mueven dinero, y hasta ahora la única salida
+          era cancelar una venta que sí ocurrió. */}
+      <EditorPedido pedido={pedido} />
+
+      <dl className="mt-3 space-y-2 text-sm">
         {/* Solo cuando no vino de la web: es lo que explica por qué el pedido
             no tiene conversación de la tienda detrás. */}
         {NOMBRE_ORIGEN[pedido.origen] && (
           <Dato termino="Entró por" valor={NOMBRE_ORIGEN[pedido.origen]} />
         )}
-        <Dato
-          termino="Pago"
-          valor={NOMBRE_PAGO[pedido.metodo_pago ?? ""] ?? "Por acordar"}
-        />
         {pedido.es_encargo && pedido.plazo_encargo_dias && (
           <Dato termino="Plazo" valor={`${pedido.plazo_encargo_dias} días`} />
         )}

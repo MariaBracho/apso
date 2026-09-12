@@ -1241,3 +1241,91 @@ test.describe("Quién compró, en una venta de mostrador", () => {
     }
   });
 });
+
+test.describe("Corregir un pedido", () => {
+  /**
+   * Uno se equivoca tecleando y hasta ahora la única salida era cancelar una
+   * venta que sí ocurrió. Estos datos no mueven dinero: el total, el
+   * inventario y la comisión se quedan donde estaban.
+   */
+  test("se arreglan los datos del cliente y queda dicho en el historial", async ({
+    page,
+  }) => {
+    const producto = await productoPorSlug(SLUG);
+    const antes = producto.stock;
+
+    await entrarComoAdmin(page);
+    await page.goto("/admin/pedidos/nuevo");
+    await page.getByLabel("Agregar producto").selectOption(producto.id);
+    await page.getByLabel("Nombre del cliente").fill("Nombre Mal Escrito");
+    await page.getByRole("button", { name: "Registrar la venta" }).click();
+    await page.waitForURL(/\/admin\/pedidos\/[0-9a-f-]{36}/);
+
+    const numero = (await page
+      .getByRole("heading", { level: 1 })
+      .textContent())!.match(/A-\d+/)![0];
+
+    try {
+      const { data: original } = await db
+        .from("pedidos")
+        .select("total_usd")
+        .eq("numero", numero)
+        .single();
+
+      await page.getByRole("button", { name: "Corregir estos datos" }).click();
+      await page.getByLabel("Nombre del cliente").fill("Nombre Bien Escrito");
+      await page.getByLabel("Entrega").selectOption("envio_nacional");
+      await page.getByLabel("Estado de destino").selectOption("Zulia");
+      await page.getByLabel("Ciudad de destino").selectOption("Maracaibo");
+      await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+      await expect(page.getByText("envío a Maracaibo, Zulia")).toBeVisible();
+
+      const { data: corregido } = await db
+        .from("pedidos")
+        .select("cliente_nombre, entrega, estado_destino, ciudad_destino, total_usd")
+        .eq("numero", numero)
+        .single();
+
+      expect(corregido!.cliente_nombre).toBe("Nombre Bien Escrito");
+      expect(corregido!.entrega).toBe("envio_nacional");
+      expect(corregido!.estado_destino).toBe("Zulia");
+      expect(corregido!.ciudad_destino).toBe("Maracaibo");
+      // Lo que sí mueve dinero no se toca: para eso está cancelar.
+      expect(corregido!.total_usd).toBe(original!.total_usd);
+
+      // Sin rastro, un dato que cambió es un dato que nadie puede explicar.
+      await expect(page.getByText(/Se corrigieron el nombre/)).toBeVisible();
+
+      // Y un envío que pasa a retirarse en el local suelta su destino: si se
+      // quedara, la etiqueta de despacho seguiría diciendo Maracaibo.
+      await page.getByRole("button", { name: "Corregir estos datos" }).click();
+      await page.getByLabel("Entrega").selectOption("punto_fijo");
+      await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+      // Se espera a que el destino nuevo esté en pantalla, no a que el viejo
+      // desaparezca: con el formulario abierto ya no está, y la prueba pasaría
+      // sin haber guardado nada.
+      await expect(page.getByText("en Punto Fijo")).toBeVisible();
+
+      const { data: final } = await db
+        .from("pedidos")
+        .select("entrega, estado_destino, ciudad_destino")
+        .eq("numero", numero)
+        .single();
+
+      expect(final!.entrega).toBe("punto_fijo");
+      expect(final!.estado_destino).toBeNull();
+      expect(final!.ciudad_destino).toBeNull();
+    } finally {
+      const { data: p } = await db
+        .from("pedidos")
+        .select("id")
+        .eq("numero", numero)
+        .single();
+      await db.from("comisiones").delete().eq("pedido_id", p!.id);
+      await borrarPedido(numero);
+      await db.from("productos").update({ stock: antes }).eq("id", producto.id);
+    }
+  });
+});

@@ -605,7 +605,16 @@ export const esquemaPedidoEditado = yup.object({
     .nullable()
     .transform(vacioANulo)
     .defined(),
-  metodo_pago: yup.string().oneOf(METODOS_PAGO).required("Elige cómo pagó."),
+  // Puede quedar sin decidir: un pedido de la web puede estar por acordar, y
+  // exigirlo aquí obligaría a inventar un método de pago para poder arreglar
+  // un nombre mal escrito.
+  metodo_pago: yup
+    .string()
+    .trim()
+    .nullable()
+    .transform(vacioANulo)
+    .defined()
+    .oneOf([...METODOS_PAGO, null], "Ese método de pago no existe."),
   entrega: yup
     .string()
     .oneOf(["punto_fijo", "envio_nacional"] as const)
